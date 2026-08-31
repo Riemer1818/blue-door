@@ -93,6 +93,12 @@ Fill in your report honestly. Specifically:
 - **`license`** — `found` only if you actually read it from the repository or
   image metadata. If you inferred it, `assumed`, and say from what. Nothing
   enforces licensing yet, so your report is the only place anyone looks.
+
+  **Write the `note` at whatever length the reasoning needs.** It is not a label,
+  it is where a reviewer gets your evidence and your uncertainty: what you read,
+  where, what it did and did not say, and what a human should check. A paragraph
+  is a good note. Do not compress it into a phrase — brevity here costs the
+  reviewer the decision you were making on their behalf.
 - **`version`** — same rule. A tag is not authoritative.
 - **image candidates** — record everything `find_image` returned, not just your
   pick.

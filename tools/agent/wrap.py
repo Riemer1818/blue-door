@@ -160,9 +160,9 @@ def build_toolset(run: E.Run, state: dict):
             # all - the agent volunteered three on the first real run and the
             # report carried none of them.
             state.setdefault("volunteered", []).append(
-                {"kind": args.get("basis") or "agent_note",
+                {"kind": "agent_note",  # the documented kind; basis is not a kind
                  "detail": args.get("value") or args.get("note", ""),
-                 "where": ""})
+                 "where": args.get("basis", "")})
         else:
             state.setdefault("recorded", {})[field] = {
                 "value": args.get("value"), "basis": args.get("basis", "unknown"),
@@ -247,6 +247,8 @@ async def run_agent(name: str, url: str | None, adapter_id: str, root: pathlib.P
                 if isinstance(block, TextBlock) and block.text.strip():
                     run.note(block.text.strip()[:1500])
                 elif isinstance(block, ToolUseBlock) and not block.name.startswith("mcp__"):
+                    state.setdefault("touched", []).append(
+                        json.dumps(block.input, default=str))
                     # Built-in tool use is logged but not narrated; the doorway
                     # tools emit their own richer events.
                     run.emit("log.line", {"stream": "stdout",
@@ -272,6 +274,27 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
             if (workspace.adapter / "manifest.json").exists() else {"passed": False,
                                                                     "error": "no manifest"}
         guardrails = workspace.verify()
+        # Cross-reference: did the agent actually reference the changed paths?
+        # A concurrent human edit in the same worktree trips the git check exactly
+        # as an escape would. This cannot be conclusive - Bash can write anywhere
+        # without naming a path - but it turns "something changed" into "nothing
+        # the agent did mentions this", which a reviewer can act on in seconds.
+        # In production the repository is read-only and the question does not arise.
+        changed_paths = [
+            line[3:].strip()
+            for g in guardrails if "repository changed" in g
+            for line in g.split(":", 1)[-1].split(";")
+        ]
+        agent_text = " ".join(state.get("touched", []))
+        unattributed = [c for c in changed_paths if c and c not in agent_text]
+        if changed_paths and len(unattributed) == len(changed_paths):
+            guardrails = [
+                g + "  [no agent tool call referenced these paths - most likely "
+                    "concurrent work in the same worktree, not a containment breach]"
+                if "repository changed" in g else g
+                for g in guardrails
+            ]
+            state["repo_change_unattributed"] = True
 
         rep = R.Report(run_id=run.run_id, adapter_id=adapter_id,
                        requested={"name": name, "url": url},
@@ -314,6 +337,9 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
                        "resume_hint": state.get("resume_hint", "")}
 
         if guardrails and any("repository changed" in g for g in guardrails):
+            # Still rejected: conservative is right when containment is in
+            # question, and a reviewer who can see it was unattributed can
+            # resume the run in one click rather than paying for a re-run.
             rep.outcome = "rejected"
         elif not conformance.get("passed"):
             rep.outcome = "gave_up"
