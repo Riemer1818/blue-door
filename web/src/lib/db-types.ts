@@ -9,6 +9,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Json = JsonValue;
 
 export type JsonArray = JsonValue[];
@@ -57,6 +59,21 @@ export interface DashboardWidgets {
   widgetType: string | null;
 }
 
+export interface Files {
+  blobKey: string;
+  byteSize: Int8;
+  contentHash: string;
+  createdAt: Generated<Timestamp>;
+  detection: string | null;
+  nodeId: string;
+  portFormat: string | null;
+  /**
+   * Port type detected on upload, or NULL when nothing in the vocabulary matched.
+   *    Format is meaningless without it, so the two are set and cleared together.
+   */
+  portType: string | null;
+}
+
 export interface GridBreakpoints {
   cols: number;
   minWidth: number;
@@ -87,6 +104,22 @@ export interface SchemaMigrations {
 export interface Surfaces {
   displayName: string;
   name: string;
+}
+
+export interface TreeFiles {
+  blobKey: string | null;
+  byteSize: Int8 | null;
+  contentHash: string | null;
+  createdAt: Timestamp | null;
+  detection: string | null;
+  id: string | null;
+  name: string | null;
+  ownerId: string | null;
+  parentId: string | null;
+  portFormat: string | null;
+  portType: string | null;
+  position: number | null;
+  updatedAt: Timestamp | null;
 }
 
 export interface Users {
@@ -140,10 +173,12 @@ export interface DB {
   dashboards: Dashboards;
   dashboardWidgetLayouts: DashboardWidgetLayouts;
   dashboardWidgets: DashboardWidgets;
+  files: Files;
   gridBreakpoints: GridBreakpoints;
   nodes: Nodes;
   schemaMigrations: SchemaMigrations;
   surfaces: Surfaces;
+  treeFiles: TreeFiles;
   users: Users;
   widgetInstances: WidgetInstances;
   widgetLayouts: WidgetLayouts;
