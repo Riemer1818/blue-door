@@ -106,5 +106,37 @@
         }
       }
     }
+  },
+  "alphabets": {
+    "$comment": "The alphabet rule, as DATA rather than code, so the Python runner and the TypeScript uploader read one source instead of drifting apart. Same pattern the sniffers already use. Two implementations are acceptable; two rules are not, and a shared corpus is what keeps them honest.",
+    "$why_this_is_hard": "Nucleotide letters are a SUBSET of protein letters, so every DNA sequence is also a syntactically valid protein sequence. Detection can therefore rule protein IN but can never rule DNA in with certainty - only with enough evidence. That asymmetry is why `ambiguous` is a real answer and not a failure to try harder.",
+    "strip": "-. \t\r\n*",
+    "rules": {
+      "protein_only_residues": {
+        "letters": "EFILPQZJO",
+        "$comment": "These have no meaning in any nucleotide alphabet, ambiguity codes included. One of them is proof of protein, whatever the counts say. Deliberately excludes X and B, which are ambiguity codes in both."
+      },
+      "nucleotide_residues": {
+        "letters": "ACGTUNRYSWKMBDHV",
+        "$comment": "Bases plus IUPAC ambiguity codes."
+      },
+      "thresholds": {
+        "min_residues_for_confidence": 50,
+        "nucleotide_fraction_for_dna": 0.95,
+        "nucleotide_fraction_for_protein": 0.85,
+        "$comment": "Below min_residues there is not enough evidence either way and the answer is ambiguous - which is the peer's case exactly: a short protein of only ACGT residues is indistinguishable from DNA and no threshold fixes that. Between the two fractions is the genuinely uncertain band. Counts are taken over the WHOLE file, not per record: thirty sequences are thirty times the evidence of one."
+      },
+      "rna_over_dna": {
+        "$comment": "U outnumbering T means RNA. Both absent leaves dna, the commoner case."
+      }
+    },
+    "answers": [
+      "dna",
+      "rna",
+      "protein",
+      "ambiguous",
+      "not_sequence"
+    ],
+    "$contract": "Declaration is the contract, detection is a check, disagreement is a finding. `ambiguous` must never be resolved by guessing: a file whose alphabet is ambiguous must not be offered as a match for a port that constrains alphabet, though it may be chosen deliberately with the ambiguity stated."
   }
 }
