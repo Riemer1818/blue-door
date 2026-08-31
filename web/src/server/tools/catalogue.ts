@@ -23,7 +23,29 @@ import path from "node:path";
 
 const TOOLS_DIR = process.env.TOOLS_DIR ?? path.join(process.cwd(), "..", "tools");
 
-export type Port = { name: string; type: string; format?: string; description?: string };
+export type Port = {
+  name: string;
+  type: string;
+  format?: string;
+  description?: string;
+  /**
+   * What this input demands beyond its type. Today only `alphabet`, and it
+   * exists because BLU-22: a protein alignment and a DNA alignment are both
+   * `Alignment/fasta`, so type alone let a protein alignment reach FastTree's
+   * nucleotide-only input and produce a confident wrong tree.
+   */
+  requires?: { alphabet?: string };
+  /**
+   * An output whose alphabet is whatever the named input port carried.
+   *
+   * Most tools are pass-through: MAFFT aligns protein or DNA and emits whichever
+   * it was given, so a fixed output alphabet would be a lie. This is what lets
+   * the alphabet detected at the top of a pipeline propagate down the chain, and
+   * why the RecA case is caught at step two even though MAFFT itself does not
+   * care. An output carrying this has no alphabet until an input is chosen.
+   */
+  alphabetFrom?: string;
+};
 
 export type Operation = {
   name: string;
@@ -63,10 +85,26 @@ export type Tool = {
 
 export type PortType = { name: string; description?: string; edam?: string; formats: string[] };
 
-type RawPorts = Record<string, { type: string; format?: string; description?: string }>;
+type RawPorts = Record<
+  string,
+  {
+    type: string;
+    format?: string;
+    description?: string;
+    requires?: { alphabet?: string };
+    alphabet_from?: string;
+  }
+>;
 
 function ports(raw: RawPorts | undefined): Port[] {
-  return Object.entries(raw ?? {}).map(([name, port]) => ({ name, ...port }));
+  return Object.entries(raw ?? {}).map(([name, port]) => ({
+    name,
+    type: port.type,
+    format: port.format,
+    description: port.description,
+    requires: port.requires,
+    alphabetFrom: port.alphabet_from,
+  }));
 }
 
 async function readJson(file: string): Promise<Record<string, unknown>> {

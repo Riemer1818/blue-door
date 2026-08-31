@@ -5,7 +5,14 @@ import Link from "next/link";
 
 import { trpc } from "@/lib/trpc";
 
-type Port = { name: string; type: string; format?: string; description?: string };
+type Port = {
+  name: string;
+  type: string;
+  format?: string;
+  description?: string;
+  requires?: { alphabet?: string };
+  alphabetFrom?: string;
+};
 
 const sig = (p: Port) => (p.format ? `${p.type}/${p.format}` : p.type);
 
@@ -228,6 +235,19 @@ function PortSet({ ports }: { ports: Port[] }) {
           className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           {port.name}: {sig(port)}
+          {/* A constraint the type cannot express. Shown because it is the
+              difference between a tree and a wrong tree: FastTree accepts any
+              Alignment/fasta and is only correct for nucleotide ones. */}
+          {port.requires?.alphabet && (
+            <span className="ml-1 rounded bg-amber-100 px-1 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400">
+              {port.requires.alphabet} only
+            </span>
+          )}
+          {/* Pass-through: whatever came in comes out. A fixed alphabet here
+              would be a lie for every tool that handles both. */}
+          {port.alphabetFrom && (
+            <span className="ml-1 text-slate-400">alphabet of {port.alphabetFrom}</span>
+          )}
         </span>
       ))}
     </span>

@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
+import type { Kysely } from "kysely";
 import { z } from "zod";
 
+import type { DB } from "@/lib/db-types";
+
 import { getBlob, putBlob } from "../storage/blobs";
+import { loadTools } from "../tools/catalogue";
 import { detect } from "../tools/detect";
 import { protectedProcedure, router } from "../trpc";
 
@@ -25,6 +29,54 @@ import { protectedProcedure, router } from "../trpc";
  * clear reason beats an out-of-memory a user cannot interpret.
  */
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Which of the caller's files could be wired to a port like this, and why the
+ * rest could not.
+ *
+ * Shared by both procedures so there is one answer to "does this file fit", not
+ * two that can drift — the same argument that put the alphabet rule in
+ * `porttypes.json` rather than in two implementations.
+ */
+async function offerings(
+  tx: Kysely<DB>,
+  constraint: { type: string; format?: string; alphabet?: string },
+) {
+  let query = tx
+    .selectFrom("treeFiles")
+    .select(["id", "name", "byteSize", "portType", "portFormat", "alphabet", "alphabetConfidence"])
+    .where("portType", "=", constraint.type);
+
+  if (constraint.format) query = query.where("portFormat", "=", constraint.format);
+  const candidates = await query.orderBy("name").execute();
+
+  const satisfies = (alphabet: string | null): boolean => {
+    if (!constraint.alphabet) return true;
+    // "We cannot tell" is not "it is fine". Nucleotide letters are a subset of
+    // protein letters, so a short run of ACGT is genuinely unresolvable, and
+    // letting ambiguity pass would reproduce BLU-22 through a different door.
+    if (alphabet === null || alphabet === "ambiguous" || alphabet === "not_sequence") return false;
+    // `nucleotide` is the constraint FastTree actually needs: DNA or RNA, not
+    // one specific one.
+    if (constraint.alphabet === "nucleotide") return alphabet === "dna" || alphabet === "rna";
+    return alphabet === constraint.alphabet;
+  };
+
+  return candidates.map((file) => ({
+    ...file,
+    matches: satisfies(file.alphabet),
+    // Absent on a match; on a near-miss it is the whole explanation. Showing a
+    // file with a reason beats hiding it with none — a file that vanishes reads
+    // as a failed upload.
+    blockedBecause: satisfies(file.alphabet)
+      ? null
+      : file.alphabet === "ambiguous"
+        ? `alphabet could not be determined, and this port needs ${constraint.alphabet}`
+        : file.alphabet === null
+          ? "alphabet was never established for this file"
+          : `it is ${file.alphabet}, and this port needs ${constraint.alphabet}`,
+  }));
+}
 
 export const filesRouter = router({
   /** Every file the caller owns, with what detection made of it. */
@@ -76,47 +128,49 @@ export const filesRouter = router({
         alphabet: z.enum(["dna", "rna", "protein", "nucleotide"]).optional(),
       }),
     )
+    .query(async ({ ctx, input }) => offerings(ctx.tx, input)),
+
+  /**
+   * The same question, asked by naming a port rather than describing one.
+   *
+   * This is the form callers should use, and the reason is a failure mode rather
+   * than convenience: `forPort` takes the alphabet constraint as an argument, so
+   * a caller who simply forgets it gets the unsafe answer silently — the protein
+   * alignment offered for FastTree, which is BLU-22 exactly. Naming the port
+   * makes forgetting impossible, because the constraint is read from the
+   * manifest that declares it.
+   *
+   * The manifest is the single source here as everywhere: `requires` lands on
+   * the port, and this reads it rather than restating it.
+   */
+  forToolPort: protectedProcedure
+    .input(
+      z.object({
+        toolId: z.string().min(1),
+        operation: z.string().min(1),
+        port: z.string().min(1),
+      }),
+    )
     .query(async ({ ctx, input }) => {
-      let query = ctx.tx
-        .selectFrom("treeFiles")
-        .select([
-          "id",
-          "name",
-          "byteSize",
-          "portType",
-          "portFormat",
-          "alphabet",
-          "alphabetConfidence",
-        ])
-        .where("portType", "=", input.type);
+      const tools = await loadTools();
+      const tool = tools.find((t) => t.id === input.toolId);
+      const operation = tool?.operations.find((op) => op.name === input.operation);
+      const port = operation?.inputs.find((p) => p.name === input.port);
 
-      if (input.format) query = query.where("portFormat", "=", input.format);
-      const candidates = await query.orderBy("name").execute();
+      if (!port) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `No input port "${input.port}" on ${input.toolId}.${input.operation}.`,
+        });
+      }
 
-      const satisfies = (alphabet: string | null): boolean => {
-        if (!input.alphabet) return true;
-        if (alphabet === null || alphabet === "ambiguous" || alphabet === "not_sequence") {
-          return false;
-        }
-        // `nucleotide` is the constraint FastTree actually needs: DNA or RNA,
-        // not one specific one.
-        if (input.alphabet === "nucleotide") return alphabet === "dna" || alphabet === "rna";
-        return alphabet === input.alphabet;
-      };
+      const files = await offerings(ctx.tx, {
+        type: port.type,
+        format: port.format,
+        alphabet: port.requires?.alphabet,
+      });
 
-      return candidates.map((file) => ({
-        ...file,
-        matches: satisfies(file.alphabet),
-        // Absent on a match; on a near-miss it is the whole explanation, and
-        // showing the file with a reason beats hiding it with none.
-        blockedBecause: satisfies(file.alphabet)
-          ? null
-          : file.alphabet === "ambiguous"
-            ? `alphabet could not be determined, and this port needs ${input.alphabet}`
-            : file.alphabet === null
-              ? "alphabet was never established for this file"
-              : `it is ${file.alphabet}, and this port needs ${input.alphabet}`,
-      }));
+      return { port, files };
     }),
 
   /**
