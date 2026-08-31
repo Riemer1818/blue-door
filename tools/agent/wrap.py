@@ -130,6 +130,10 @@ def build_toolset(run: E.Run, state: dict):
         result = M.resolve_digest(args["reference"])
         if result.get("found"):
             state["image_pinned"] = result["pinned"]
+            # The tag-shaped reference the agent actually picked. Kept so image
+            # ambiguity is judged on the choice rather than on the digest, which
+            # is not comparable to a tag.
+            state["image_chosen_candidate"] = args["reference"]
         return _text(result)
 
     @tool("find_description", "Look for an existing nf-core meta.yml for this tool.",
@@ -288,14 +292,16 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
                      "digest": state.get("image_pinned"),
                      "origin": "built_from_source" if (workspace.adapter / "Dockerfile").exists()
                                else "registry",
-                     "candidates": state.get("image_candidates", [])}
+                     "candidates": state.get("image_candidates", []),
+                     "chosen_candidate": state.get("image_chosen_candidate")}
         rep.source = (manifest or {}).get("source", {})
         rep.conformance = conformance
         rep.guardrails = guardrails
         rep.probes = state.get("probes", [])
         rep.caveats = state.get("volunteered", [])
         rep.port_types_used = [
-            {"operation": op_name, "port": port_name, "type": port["type"]}
+            {"operation": op_name, "port": port_name, "type": port["type"],
+             "direction": "input" if side == "inputs" else "output"}
             for op_name, op in ((manifest or {}).get("operations") or {}).items()
             for side in ("inputs", "outputs")
             for port_name, port in op.get(side, {}).items()

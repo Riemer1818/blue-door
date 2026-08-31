@@ -43,6 +43,19 @@ def stated(value, basis: str, note: str = "") -> dict:
     return {"value": value, "basis": basis, "note": note}
 
 
+# Documented kinds. Consumers render an unknown kind generically rather than
+# dropping it, but anything raised routinely belongs here so a renderer can be
+# written for it deliberately.
+CAVEAT_KINDS = {
+    "license_unknown": "license was not read from the artefact",
+    "version_unknown": "version was not read from the artefact",
+    "text_fallback": "a port fell back to the Text escape hatch",
+    "ambiguous_image": "the image choice was the agent's own judgement call",
+    "untested_path": "something about the build could not be tied to a digest",
+    "agent_note": "volunteered by the agent; free-form",
+}
+
+
 @dataclass
 class Caveat:
     """Something the agent could not establish. Present even on success.
@@ -121,21 +134,37 @@ class Report:
                 )
 
         for port in self.port_types_used:
-            if port.get("type") == "Text":
-                note(
-                    "text_fallback",
-                    "typed as Text, the escape hatch. It will pass conformance and "
-                    "compose with nothing. Check whether a real type fits, or whether "
-                    "the vocabulary needs extending.",
-                    where=f"{port.get('operation')}.{port.get('port')}",
-                )
+            if port.get("type") != "Text":
+                continue
+            # A Text output and a Text input are not the same failure. An output
+            # nothing can consume is the composability break this caveat exists
+            # to catch; an input merely means the tool accepts anything. Same
+            # wording for both would flatten a severe finding into a mild one.
+            if port.get("direction") == "output":
+                detail = ("output typed as Text, the escape hatch. Nothing downstream "
+                          "can consume it, so this operation composes with nothing. "
+                          "Check whether a real type fits, or propose one.")
+            else:
+                detail = ("input typed as Text, the escape hatch. The operation will "
+                          "accept anything, so wiring into it is unchecked. Prefer a "
+                          "real type where one fits.")
+            note("text_fallback", detail,
+                 where=f"{port.get('operation')}.{port.get('port')}"
+                       f" ({port.get('direction', 'unknown')})")
 
         # The image choice is the agent's own judgement call, which makes it the
         # caveat most exposed to an agent that would rather file a quiet report:
         # not mentioning the three other candidates costs it nothing. So it is
         # derived from the candidate set find_image returns, never volunteered.
         candidates = self.image.get("candidates") or []
-        chosen = self.image.get("reference")
+        # Compare the candidate the agent selected, not the final reference. The
+        # final reference is digest-pinned - which is exactly what we want on
+        # every run - and a digest never string-equals a tag-shaped candidate. The
+        # earlier comparison therefore fired on every correctly-pinned run, and a
+        # caveat that always fires is one reviewers learn to skip past. Losing
+        # this particular one to noise would cost us the only caveat covering the
+        # agent's own judgement.
+        chosen = self.image.get("chosen_candidate") or self.image.get("reference")
         if len(candidates) > 1 and chosen and chosen != candidates[0]:
             note(
                 "ambiguous_image",
