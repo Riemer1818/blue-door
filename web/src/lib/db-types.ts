@@ -23,6 +23,8 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export type Numeric = ColumnType<string, number | string, number | string>;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Dashboards {
@@ -109,6 +111,25 @@ export interface Nodes {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface Runs {
+  adapterId: string;
+  eventsPath: string | null;
+  finishedAt: Timestamp | null;
+  id: string;
+  operation: string;
+  /**
+   * NULL while running. Values come from tools/outcomes.json - deliberately not
+   *    constrained here, because that file is the vocabulary and a check constraint
+   *    would be a second statement of it.
+   */
+  outcome: string | null;
+  outputParent: string | null;
+  ownerId: string;
+  result: Json | null;
+  startedAt: Generated<Timestamp>;
+  wallSeconds: Numeric | null;
+}
+
 export interface SchemaMigrations {
   appliedAt: Generated<Timestamp>;
   version: string;
@@ -191,6 +212,7 @@ export interface DB {
   files: Files;
   gridBreakpoints: GridBreakpoints;
   nodes: Nodes;
+  runs: Runs;
   schemaMigrations: SchemaMigrations;
   surfaces: Surfaces;
   treeFiles: TreeFiles;
