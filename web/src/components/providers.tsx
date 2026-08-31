@@ -9,7 +9,24 @@ import superjson from "superjson";
 import { trpc } from "@/lib/trpc";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // React Query retries three times by default, which is right for a
+            // dropped connection and wrong for "no such tool" — a 404 or a 403
+            // will still be a 404 on the third attempt, and meanwhile the page
+            // sits on a spinner instead of saying what happened.
+            retry: (failureCount, error) => {
+              const status = (error as { data?: { httpStatus?: number } })?.data?.httpStatus;
+              if (status && status >= 400 && status < 500) return false;
+              return failureCount < 2;
+            },
+          },
+        },
+      }),
+  );
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [httpBatchLink({ url: "/api/trpc", transformer: superjson })],

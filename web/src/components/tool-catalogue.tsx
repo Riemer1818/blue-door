@@ -1,6 +1,7 @@
 "use client";
 
-import { Bot, CircleAlert, User } from "lucide-react";
+import { Bot, ChevronRight, CircleAlert, User } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { trpc } from "@/lib/trpc";
@@ -82,14 +83,16 @@ export function ToolCatalogue() {
 
       <ul className="flex flex-col gap-3">
         {shown.map((tool) => (
-          <li
-            key={tool.id}
-            className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
-          >
+          <li key={tool.id}>
+            <Link
+              href={`/tools/${tool.id}`}
+              className="block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500"
+            >
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="flex items-baseline gap-2">
+              <span className="flex items-baseline gap-1.5">
                 <h2 className="font-semibold">{tool.id}</h2>
                 <span className="font-mono text-xs text-slate-400">{tool.version}</span>
+                <ChevronRight size={14} className="self-center text-slate-300 dark:text-slate-600" />
               </span>
               <span className="flex items-center gap-2 text-xs">
                 <Authorship by={tool.provenance.authoredBy} />
@@ -126,6 +129,7 @@ export function ToolCatalogue() {
               {tool.source.ref && ` @ ${tool.source.ref}`}
               {tool.source.imageOrigin && ` · image ${tool.source.imageOrigin}`}
             </p>
+            </Link>
           </li>
         ))}
       </ul>

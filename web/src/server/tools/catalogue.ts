@@ -30,6 +30,11 @@ export type Operation = {
   description?: string;
   inputs: Port[];
   outputs: Port[];
+  /** argv, never a shell string. Shown because it is the truth of what executes. */
+  command: string[];
+  timeoutSeconds?: number;
+  stdin?: string;
+  stdout?: string;
 };
 
 export type Tool = {
@@ -101,13 +106,25 @@ export async function loadTools(): Promise<Tool[]> {
       operations: Object.entries(
         (raw.operations ?? {}) as Record<
           string,
-          { description?: string; inputs?: RawPorts; outputs?: RawPorts }
+          {
+            description?: string;
+            inputs?: RawPorts;
+            outputs?: RawPorts;
+            command?: string[];
+            timeout_seconds?: number;
+            stdin?: string;
+            stdout?: string;
+          }
         >,
       ).map(([name, op]) => ({
         name,
         description: op.description,
         inputs: ports(op.inputs),
         outputs: ports(op.outputs),
+        command: op.command ?? [],
+        timeoutSeconds: op.timeout_seconds,
+        stdin: op.stdin,
+        stdout: op.stdout,
       })),
       source: {
         repository: source.repository,
