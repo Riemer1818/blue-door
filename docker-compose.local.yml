@@ -29,33 +29,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # S3-compatible object storage for the things Postgres should not hold: input
-  # datasets, tool outputs, fixtures and goldens. Deliberately S3-shaped so the
-  # same client speaks to Scaleway Object Storage in production - EU-hosted, and
-  # already the provider in infra/terraform.
-  #
-  # Files are not documents. nodes.content is a BlockNote jsonb document and was
-  # never going to hold a 2 MB FASTQ; this is where bytes live.
-  minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    container_name: bluedoor-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: bluedoor
-      MINIO_ROOT_PASSWORD: bluedoor_dev_secret
-    ports:
-      # 9000 is the S3 API, 9001 the web console. Bound to localhost only.
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
 volumes:
   postgres-data:
-  minio-data:

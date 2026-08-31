@@ -1,3 +1,0 @@
-# Storage-side only. tools/runner stays standard-library, and nothing in it
-# imports this - the runner takes local paths and never knows storage exists.
-boto3>=1.34
