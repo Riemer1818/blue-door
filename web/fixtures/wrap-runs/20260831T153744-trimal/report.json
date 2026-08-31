@@ -1,0 +1,138 @@
+{
+  "schema_version": "0.2",
+  "run_id": "20260831T153744-trimal",
+  "adapter_id": "trimal",
+  "requested": {
+    "name": "trimal",
+    "url": null
+  },
+  "outcome": "gave_up",
+  "seconds": 622.8,
+  "image": {
+    "reference": "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+    "digest": null,
+    "origin": "registry",
+    "basis": "assumed",
+    "note": "the BioContainers package name was inferred from the tool name; no upstream reference confirms it.",
+    "candidates": [
+      "quay.io/biocontainers/trimal:1.5.0--h4ac6f70_0",
+      "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6"
+    ]
+  },
+  "source": {
+    "repository": "https://github.com/inab/trimal",
+    "ref": "v1.4.1"
+  },
+  "version": {
+    "value": null,
+    "basis": "unknown",
+    "note": "`trimal --version` writes to stderr and exits 1"
+  },
+  "session": {
+    "sdk_session_id": "sess_01HQZP4T9V2X5Z8B1D3F6H9K",
+    "resumable": true,
+    "resume_hint": "Every candidate command produced an output file, but none matched the declared Alignment type: trimal emits its own gapless format when -phylip is absent, and I could not establish which flag yields aligned FASTA. Confirming the flag, or registering the format as a type, would let this pass."
+  },
+  "promotable": [
+    "manifest.json",
+    "fixtures/toy/case.json",
+    "fixtures/toy/inputs/alignment.fasta"
+  ],
+  "rejected_files": [],
+  "manifest": {
+    "id": "trimal",
+    "version": null,
+    "image": "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+    "machine_class": "standard",
+    "operations": {
+      "trim": {
+        "command": [
+          "trimal",
+          "-in",
+          "{{inputs.alignment}}",
+          "-out",
+          "{{outputs.trimmed}}",
+          "-automated1"
+        ],
+        "inputs": {
+          "alignment": {
+            "type": "Alignment",
+            "format": "fasta"
+          }
+        },
+        "outputs": {
+          "trimmed": {
+            "type": "Alignment",
+            "format": "fasta"
+          }
+        }
+      }
+    }
+  },
+  "conformance": {
+    "passed": false,
+    "checks": 3,
+    "failures": [
+      {
+        "operation": "trim",
+        "port": "trimmed",
+        "reason": "declared Alignment/fasta, detected Text/plain - records differ in length [84, 91, 84], unaligned"
+      },
+      {
+        "operation": "trim",
+        "port": "trimmed",
+        "reason": "determinism check skipped: first run did not produce a valid output"
+      }
+    ]
+  },
+  "guardrails": [],
+  "port_types_used": [
+    {
+      "operation": "trim",
+      "port": "alignment",
+      "type": "Alignment"
+    },
+    {
+      "operation": "trim",
+      "port": "trimmed",
+      "type": "Alignment"
+    }
+  ],
+  "license": {
+    "value": "GPL-3.0",
+    "basis": "found",
+    "note": "COPYING at the repository root"
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+      "command": "trimal --version",
+      "exit_code": 1,
+      "ms": 221
+    },
+    {
+      "image": "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+      "command": "trimal -in /work/in/a.fasta -out /work/out/t.fasta -automated1",
+      "exit_code": 0,
+      "ms": 508
+    },
+    {
+      "image": "quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+      "command": "trimal -in /work/in/a.fasta -out /work/out/t.fasta -gappyout -fasta",
+      "exit_code": 0,
+      "ms": 495
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "version_unknown",
+      "detail": "version recorded as none (unknown). `trimal --version` writes to stderr and exits 1",
+      "where": ""
+    },
+    {
+      "kind": "ambiguous_image",
+      "detail": "chose quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6 over the newest candidate quay.io/biocontainers/trimal:1.5.0--h4ac6f70_0. 2 were available: quay.io/biocontainers/trimal:1.5.0--h4ac6f70_0, quay.io/biocontainers/trimal:1.4.1--h9f5acd7_6",
+      "where": ""
+    }
+  ]
+}

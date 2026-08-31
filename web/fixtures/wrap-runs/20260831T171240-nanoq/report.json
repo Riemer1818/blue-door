@@ -1,0 +1,199 @@
+{
+  "schema_version": "0.2",
+  "run_id": "20260831T171240-nanoq",
+  "adapter_id": "nanoq",
+  "requested": {
+    "name": "nanoq",
+    "url": "https://github.com/esteinig/nanoq"
+  },
+  "outcome": "needs_review",
+  "seconds": 291.7,
+  "image": {
+    "reference": "quay.io/biocontainers/nanoq:0.10.0--h031d066_2",
+    "digest": "sha256:c1e3a5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3",
+    "origin": "registry",
+    "basis": "found",
+    "candidates": [
+      "quay.io/biocontainers/nanoq:0.10.0--h031d066_2"
+    ],
+    "chosen_candidate": "quay.io/biocontainers/nanoq:0.10.0--h031d066_2"
+  },
+  "source": {
+    "repository": "https://github.com/esteinig/nanoq",
+    "ref": "v0.10.0"
+  },
+  "version": {
+    "value": "0.10.0",
+    "basis": "found",
+    "note": "reported by `nanoq --version`"
+  },
+  "session": {
+    "sdk_session_id": "sess_01HQZT2X5A8C1E4G7J0M3P6R",
+    "resumable": true,
+    "resume_hint": ""
+  },
+  "promotable": [
+    "manifest.json",
+    "README.md",
+    "fixtures/nanopore/case.json",
+    "fixtures/nanopore/inputs/reads.fastq",
+    "fixtures/nanopore/expected/report/report.txt"
+  ],
+  "rejected_files": [],
+  "manifest": {
+    "id": "nanoq",
+    "version": "0.10.0",
+    "image": "quay.io/biocontainers/nanoq:0.10.0--h031d066_2",
+    "machine_class": "nano",
+    "operations": {
+      "stats": {
+        "command": [
+          "nanoq",
+          "-i",
+          "{{inputs.reads}}",
+          "-s"
+        ],
+        "stdout": "report",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "report": {
+            "type": "Text",
+            "format": "plain"
+          },
+          "log": {
+            "type": "Text",
+            "format": "plain"
+          }
+        }
+      },
+      "filter": {
+        "command": [
+          "nanoq",
+          "-i",
+          "{{inputs.reads}}",
+          "-l",
+          "500"
+        ],
+        "stdout": "filtered",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "filtered": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        }
+      }
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "stage": "operations",
+    "checks": 5,
+    "failures": [],
+    "results": [
+      {
+        "case": "nanopore",
+        "operation": "stats",
+        "status": "pass",
+        "detail": "report: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "filter",
+        "status": "pass",
+        "detail": "filtered: matches golden"
+      }
+    ],
+    "warnings": []
+  },
+  "guardrails": [],
+  "port_types_used": [
+    {
+      "operation": "stats",
+      "port": "reads",
+      "type": "Sequence",
+      "direction": "input"
+    },
+    {
+      "operation": "stats",
+      "port": "report",
+      "type": "Text",
+      "direction": "output"
+    },
+    {
+      "operation": "stats",
+      "port": "log",
+      "type": "Text",
+      "direction": "output"
+    },
+    {
+      "operation": "filter",
+      "port": "reads",
+      "type": "Sequence",
+      "direction": "input"
+    },
+    {
+      "operation": "filter",
+      "port": "filtered",
+      "type": "Sequence",
+      "direction": "output"
+    }
+  ],
+  "license": {
+    "value": "MIT",
+    "basis": "found",
+    "note": "LICENSE at the repository root"
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/nanoq:0.10.0--h031d066_2",
+      "command": [
+        "sh",
+        "-c",
+        "nanoq --version; nanoq --help | head -40"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/nanoq:0.10.0--h031d066_2",
+      "command": [
+        "sh",
+        "-c",
+        "nanoq -i /work/in/reads.fastq -s > /work/out/report.txt; echo exit=$?; cat /work/out/report.txt"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "vocabulary_gap",
+      "detail": "typed as Text because no port type covers this data. The agent proposed a new type rather than forcing a wrong one - see `proposals`. Fixing this means extending porttypes.json, not editing this adapter.",
+      "where": "stats.report (output)"
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "output typed as Text, the escape hatch. Nothing downstream can consume it, so this operation composes with nothing. Check whether a real type fits, or propose one.",
+      "where": "stats.log (output)"
+    }
+  ],
+  "proposals": [
+    {
+      "name": "ReadSummary",
+      "describes": "A per-run summary of long-read sequencing output: read count, total bases, N50, and quality quantiles. Emitted by nanoq, NanoStat and seqkit stats in mutually incompatible layouts, so a type here would also give the catalogue somewhere to put a converter.",
+      "ports": [
+        "stats.report"
+      ],
+      "how_to_recognise": "A headerless block of `label: value` lines where every value is numeric and at least one label matches /^(reads|bases|n50)$/i. Distinguished from Table by having no delimiter and no header row."
+    }
+  ]
+}

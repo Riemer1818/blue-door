@@ -11,7 +11,8 @@
     "db:migrate": "../db/apply.sh",
     "db:seed": "../db/seed-dev.sh",
     "db:types": "kysely-codegen --url \"$DATABASE_URL_ADMIN\" --dialect postgres --camel-case --out-file src/lib/db-types.ts",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "node scripts/generate-outcomes.mjs && next typegen && tsc --noEmit",
+    "outcomes:types": "node scripts/generate-outcomes.mjs"
   },
   "dependencies": {
     "@blocknote/core": "^0.54.0",

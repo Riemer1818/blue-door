@@ -1,0 +1,150 @@
+{
+  "schema_version": "0.2",
+  "run_id": "20260831T151902-blast",
+  "adapter_id": "blast",
+  "requested": {
+    "name": "blast",
+    "url": "https://blast.ncbi.nlm.nih.gov/"
+  },
+  "outcome": "needs_review",
+  "seconds": 413.2,
+  "image": {
+    "reference": "quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1",
+    "digest": "sha256:b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4",
+    "origin": "registry",
+    "basis": "found",
+    "candidates": [
+      "quay.io/biocontainers/blast:2.16.0--pl5321h6f7f691_0",
+      "quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1",
+      "quay.io/biocontainers/blast:2.14.1--pl5321h6f7f691_0",
+      "quay.io/biocontainers/blast:2.13.0--hf3cf87c_0"
+    ]
+  },
+  "source": {
+    "repository": "https://github.com/ncbi/blast_plus_docs",
+    "ref": "master"
+  },
+  "version": {
+    "value": "2.15.0",
+    "basis": "found",
+    "note": "reported by `blastn -version`"
+  },
+  "session": {
+    "sdk_session_id": "sess_01HQZM7Q2R5T8W1Y4A6C9E2G",
+    "resumable": true,
+    "resume_hint": "The `hits` output is tabular (BLAST outfmt 6) but there is no Table format registered for it, so it was typed Text. Registering the format, or confirming Table/tsv is the right type, would let this compose with downstream tools."
+  },
+  "promotable": [
+    "manifest.json",
+    "README.md",
+    "fixtures/small-query/case.json",
+    "fixtures/small-query/inputs/query.fasta",
+    "fixtures/small-query/inputs/subject.fasta",
+    "fixtures/small-query/expected/hits/hits.txt"
+  ],
+  "rejected_files": [
+    {
+      "path": "explore_outfmt.py",
+      "why": "not in the promotable allowlist - probe scripts belong in scratch, which is discarded with the run"
+    },
+    {
+      "path": "notes.txt",
+      "why": "not in the promotable allowlist - an artefact nobody can review"
+    }
+  ],
+  "manifest": {
+    "id": "blast",
+    "version": "2.15.0",
+    "image": "quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1",
+    "machine_class": "standard",
+    "operations": {
+      "blastn": {
+        "command": [
+          "blastn",
+          "-query",
+          "{{inputs.query}}",
+          "-subject",
+          "{{inputs.subject}}",
+          "-outfmt",
+          "6"
+        ],
+        "stdout": "hits",
+        "inputs": {
+          "query": {
+            "type": "Sequence",
+            "format": "fasta"
+          },
+          "subject": {
+            "type": "Sequence",
+            "format": "fasta"
+          }
+        },
+        "outputs": {
+          "hits": {
+            "type": "Text",
+            "format": "plain"
+          }
+        }
+      }
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "checks": 4,
+    "failures": []
+  },
+  "guardrails": [],
+  "port_types_used": [
+    {
+      "operation": "blastn",
+      "port": "query",
+      "type": "Sequence"
+    },
+    {
+      "operation": "blastn",
+      "port": "subject",
+      "type": "Sequence"
+    },
+    {
+      "operation": "blastn",
+      "port": "hits",
+      "type": "Text"
+    }
+  ],
+  "license": {
+    "value": "public-domain",
+    "basis": "assumed",
+    "note": "NCBI-authored software is generally public domain, but no LICENSE file is present in the repository and the claim was not confirmed against an authoritative statement."
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1",
+      "command": "blastn -help",
+      "exit_code": 0,
+      "ms": 306
+    },
+    {
+      "image": "quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1",
+      "command": "blastn -query /work/in/q.fasta -subject /work/in/s.fasta -outfmt 6",
+      "exit_code": 0,
+      "ms": 894
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "license_unknown",
+      "detail": "license recorded as public-domain (assumed). NCBI-authored software is generally public domain, but no LICENSE file is present in the repository and the claim was not confirmed against an authoritative statement. Nothing enforces this yet, so this gate is where it gets looked at.",
+      "where": ""
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "blastn.hits"
+    },
+    {
+      "kind": "ambiguous_image",
+      "detail": "chose quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1 over the newest candidate quay.io/biocontainers/blast:2.16.0--pl5321h6f7f691_0. 4 were available: quay.io/biocontainers/blast:2.16.0--pl5321h6f7f691_0, quay.io/biocontainers/blast:2.15.0--pl5321h6f7f691_1, quay.io/biocontainers/blast:2.14.1--pl5321h6f7f691_0, quay.io/biocontainers/blast:2.13.0--hf3cf87c_0",
+      "where": ""
+    }
+  ]
+}

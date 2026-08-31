@@ -1,0 +1,295 @@
+{
+  "schema_version": "0.1",
+  "run_id": "4a42e3b1b050",
+  "adapter_id": "mafft2",
+  "requested": {
+    "name": "mafft",
+    "url": null
+  },
+  "outcome": "rejected",
+  "seconds": 374.5,
+  "image": {
+    "reference": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+    "digest": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+    "origin": "registry",
+    "candidates": [
+      "quay.io/biocontainers/mafft:7.525--h031d066_1",
+      "quay.io/biocontainers/mafft:7.525--h031d066_0",
+      "quay.io/biocontainers/mafft:7.520--h031d066_3",
+      "quay.io/biocontainers/mafft:7.520--h031d066_2",
+      "quay.io/biocontainers/mafft:7.520--hec16e2b_1"
+    ]
+  },
+  "source": {
+    "repository": "https://gitlab.com/sysimm/mafft",
+    "ref": "v7.525",
+    "image_origin": "registry"
+  },
+  "version": {
+    "value": "7.525",
+    "basis": "found",
+    "note": "`mafft --version` inside the pinned image prints \"v7.525 (2024/Mar/13)\" to stderr, and /usr/local/bin/mafft hardcodes version=\"v7.525 (2024/Mar/13)\". The conda-meta record for the package also says 7.525. All three agree, so this is read from the artefact rather than inferred from the image tag."
+  },
+  "session": {
+    "sdk_session_id": "d06e1c99-4d26-40ff-9ae0-8e15fa3a59ee",
+    "resumable": true,
+    "resume_hint": ""
+  },
+  "promotable": [
+    "fixtures/basic/expected/add/alignment.aln.fasta",
+    "fixtures/basic/expected/align/alignment.aln.fasta",
+    "fixtures/basic/inputs/additional.fasta",
+    "fixtures/basic/inputs/alignment.aln.fasta",
+    "fixtures/basic/inputs/sequences.fasta",
+    "fixtures/protein/expected/add/alignment.aln.fasta",
+    "fixtures/protein/expected/align/alignment.aln.fasta",
+    "fixtures/protein/inputs/additional.fasta",
+    "fixtures/protein/inputs/alignment.aln.fasta",
+    "fixtures/protein/inputs/sequences.fasta",
+    "manifest.json"
+  ],
+  "rejected_files": [],
+  "manifest": {
+    "id": "mafft2",
+    "version": "7.525",
+    "description": "Multiple sequence alignment (MAFFT). Turns unaligned Sequence records into an Alignment, and can extend an existing Alignment with further sequences without realigning it from scratch.",
+    "homepage": "https://mafft.cbrc.jp/alignment/software/",
+    "license": "BSD",
+    "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+    "machine_class": "standard",
+    "operations": {
+      "align": {
+        "description": "Align sequences de novo with automatic strategy selection. --auto also picks the residue alphabet: probing showed 'tbfast-pair (nuc) model=DNA200' for nucleotide input and '(aa) model=BLOSUM62' for protein, so no alphabet flag is needed. --quiet is load-bearing: without it MAFFT writes ~62 lines of progress to stderr. Results go to stdout, not to a file.",
+        "command": [
+          "mafft",
+          "--auto",
+          "--quiet",
+          "{{inputs.sequences}}"
+        ],
+        "stdout": "alignment",
+        "inputs": {
+          "sequences": {
+            "type": "Sequence",
+            "format": "fasta",
+            "description": "Two or more unaligned sequences, nucleotide or protein."
+          }
+        },
+        "outputs": {
+          "alignment": {
+            "type": "Alignment",
+            "format": "fasta",
+            "description": "Input order preserved (MAFFT's default; --reorder would change it). Residues are lowercased, which is MAFFT's documented default."
+          }
+        },
+        "timeout_seconds": 600
+      },
+      "add": {
+        "description": "Add new sequences to an existing alignment, keeping the existing columns' homology and inserting gap columns where the new sequences need them. Plain --add is used rather than --add --keeplength: --keeplength would silently delete residues of the added sequences that fall in new insertions, which is data loss the caller cannot see.",
+        "command": [
+          "mafft",
+          "--add",
+          "{{inputs.additional}}",
+          "--quiet",
+          "{{inputs.alignment}}"
+        ],
+        "stdout": "alignment",
+        "inputs": {
+          "alignment": {
+            "type": "Alignment",
+            "format": "fasta",
+            "description": "The existing alignment to extend."
+          },
+          "additional": {
+            "type": "Sequence",
+            "format": "fasta",
+            "description": "Unaligned sequences to place into that alignment."
+          }
+        },
+        "outputs": {
+          "alignment": {
+            "type": "Alignment",
+            "format": "fasta",
+            "description": "The existing records first, in their original order, then the added ones."
+          }
+        },
+        "timeout_seconds": 600
+      }
+    },
+    "source": {
+      "repository": "https://gitlab.com/sysimm/mafft",
+      "ref": "v7.525",
+      "image_origin": "registry"
+    },
+    "provenance": {
+      "authored_by": "doorway adapter agent",
+      "authored_at": "2026-08-31"
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "stage": "operations",
+    "checks": 4,
+    "failures": [],
+    "results": [
+      {
+        "case": "basic",
+        "operation": "align",
+        "status": "pass",
+        "detail": "alignment: matches golden"
+      },
+      {
+        "case": "basic",
+        "operation": "add",
+        "status": "pass",
+        "detail": "alignment: matches golden"
+      },
+      {
+        "case": "protein",
+        "operation": "align",
+        "status": "pass",
+        "detail": "alignment: matches golden"
+      },
+      {
+        "case": "protein",
+        "operation": "add",
+        "status": "pass",
+        "detail": "alignment: matches golden"
+      }
+    ],
+    "warnings": []
+  },
+  "guardrails": [
+    "the repository changed during the run; the agent must work only in staging"
+  ],
+  "port_types_used": [
+    {
+      "operation": "align",
+      "port": "sequences",
+      "type": "Sequence"
+    },
+    {
+      "operation": "align",
+      "port": "alignment",
+      "type": "Alignment"
+    },
+    {
+      "operation": "add",
+      "port": "alignment",
+      "type": "Alignment"
+    },
+    {
+      "operation": "add",
+      "port": "additional",
+      "type": "Sequence"
+    },
+    {
+      "operation": "add",
+      "port": "alignment",
+      "type": "Alignment"
+    }
+  ],
+  "license": {
+    "value": "BSD",
+    "basis": "found",
+    "note": "Read verbatim from image metadata: /usr/local/conda-meta/mafft-7.525-h031d066_1.json gives \"license\": \"BSD\". That is all the image asserts \u2014 it names no clause count and ships no MAFFT licence text (/usr/local/share/licenses contains only gcc-libs and libstdc++ runtime exceptions). MAFFT upstream is commonly described as BSD-3-Clause, but I did not read the upstream LICENSE file (the probe sandbox has no network), so I recorded the weaker string the image actually states rather than upgrading it to BSD-3-Clause on recollection. A human should confirm the clause count against https://mafft.cbrc.jp before this is served to anyone."
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "mafft --version; echo '--- exit:'$?; ls /usr/local/libexec/mafft | head; echo '--- licenses:'; ls /usr/local/share/ 2>/dev/null | head -30; find / -iname '*LICENSE*' -path '*mafft*' 2>/dev/null | head"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "ls -R /usr/local/share/licenses 2>/dev/null | head -40; echo '=== conda meta ==='; ls /usr/local/conda-meta/ 2>/dev/null | grep -i mafft; python -c \"import json,glob;f=glob.glob('/usr/local/conda-meta/mafft*.json')[0];d=json.load(open(f));print({k:d.get(k) for k in ['license','license_family','version','name','url']})\" 2>/dev/null || grep -o '\"license[^,]*' /usr/local/conda-meta/mafft*.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "grep -o '\"license[^,]*' /usr/local/conda-meta/mafft*.json; echo ===; head -60 /usr/local/bin/mafft | sed -n '1,40p'"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "ls -la; echo '=== no quiet ==='; mafft --auto seqs.fasta > out_noisy.fa 2> err_noisy.txt; echo exit=$?; echo stderr_lines=$(wc -l < err_noisy.txt); head -5 err_noisy.txt; echo '=== stdout of noisy run ==='; cat out_noisy.fa"
+      ],
+      "exit_code": null
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "mafft --auto /work/in/sequences.fasta > /work/out/noisy.fa 2> /work/out/noisy.err; echo exit=$?; echo '--- stderr line count:'; wc -l < /work/out/noisy.err; echo '--- first 12 stderr lines:'; head -12 /work/out/noisy.err; echo '--- stdout:'; cat /work/out/noisy.fa"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "cd /work/out; mafft --auto --quiet /work/in/sequences.fasta > a1.fa 2> q1.err; echo align_exit=$?; echo quiet_stderr_lines=$(wc -l < q1.err); cat q1.err; sleep 1; mafft --auto --quiet /work/in/sequences.fasta > a2.fa 2> q2.err; if cmp -s a1.fa a2.fa; then echo DETERMINISTIC; else echo NONDETERMINISTIC; diff a1.fa a2.fa | head; fi; echo '--- does output embed cmdline/timestamp?'; grep -n -iE 'mafft|version|date|/work|20[0-9][0-9]' a1.fa | head; echo '--- badinput ---'; printf 'not a fasta at all\\njust text\\n' > /work/out/bad.txt; mafft --auto --quiet /work/out/bad.txt > bad.out 2> bad.err; echo bad_exit=$?; echo bad_out_bytes=$(wc -c < bad.out); head -3 bad.err; echo '--- empty input ---'; : > empty.fa; mafft --auto --quiet empty.fa > e.out 2> e.err; echo empty_exit=$?; echo empty_bytes=$(wc -c < e.out); head -3 e.err"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "mafft --help 2>&1 | grep -iE 'quiet|case|add|reorder|thread|clustalout|inputorder|anysymbol' | head -40; echo '=== bad input WITHOUT quiet ==='; printf 'not a fasta at all\\njust text\\n' > /work/out/bad.txt; mafft --auto /work/out/bad.txt > /work/out/bad.out 2>/work/out/bad.err; echo exit=$?; tail -5 /work/out/bad.err; echo bytes=$(wc -c </work/out/bad.out)"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "cd /work/out; mafft --add /work/in/new.fasta --keeplength --quiet /work/in/aln.fasta > add1.fa 2> add1.err; echo add_exit=$?; echo add_err_lines=$(wc -l < add1.err); head -3 add1.err; echo '--- records:'; grep -c '^>' add1.fa; awk '/^>/{if(n)print n;n=0;next}{n+=length($0)}END{print n}' add1.fa; echo '--- last record:'; tail -5 add1.fa; sleep 1; mafft --add /work/in/new.fasta --keeplength --quiet /work/in/aln.fasta > add2.fa 2>/dev/null; cmp -s add1.fa add2.fa && echo DETERMINISTIC || echo NONDETERMINISTIC"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "cd /work/out; mafft --add /work/in/sequences.fasta --quiet /work/in/alignment.aln.fasta > p1.fa 2> p1.err; echo exit=$?; echo err_lines=$(wc -l < p1.err); echo records=$(grep -c '^>' p1.fa); awk '/^>/{if(n)print n;n=0;next}{n+=length($0)}END{print n}' p1.fa | sort -u; sleep 1; mafft --add /work/in/sequences.fasta --quiet /work/in/alignment.aln.fasta > p2.fa 2>/dev/null; cmp -s p1.fa p2.fa && echo DETERMINISTIC || echo NONDETERMINISTIC; echo '=== case options in mafft script ==='; grep -oE '\\-\\-[a-z]*case[a-z]*|preservecase|--originalseqonly' /usr/local/bin/mafft | sort -u; echo '=== all long opts mentioning case in help ==='; mafft --man 2>/dev/null | grep -i 'case' | head -5"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+      "command": [
+        "sh",
+        "-c",
+        "cd /work/out; mafft --auto --quiet --preservecase /work/in/sequences.fasta > pc.fa 2> pc.err; echo exit=$?; echo err=$(wc -l < pc.err); head -3 pc.fa"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "ambiguous_image",
+      "detail": "chose quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790 over the newest candidate quay.io/biocontainers/mafft:7.525--h031d066_1. 5 were available: quay.io/biocontainers/mafft:7.525--h031d066_1, quay.io/biocontainers/mafft:7.525--h031d066_0, quay.io/biocontainers/mafft:7.520--h031d066_3, quay.io/biocontainers/mafft:7.520--h031d066_2 ...",
+      "where": ""
+    }
+  ]
+}

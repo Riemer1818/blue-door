@@ -1,0 +1,95 @@
+{
+  "schema_version": "0.2",
+  "run_id": "20260831T160115-hmmer",
+  "adapter_id": "hmmer",
+  "requested": {
+    "name": "hmmer",
+    "url": "https://github.com/EddyRivasLab/hmmer"
+  },
+  "outcome": "rejected",
+  "seconds": 88.1,
+  "image": {
+    "reference": "quay.io/biocontainers/hmmer:3.4--hdbdd923_1",
+    "digest": null,
+    "origin": "registry",
+    "basis": "found",
+    "candidates": [
+      "quay.io/biocontainers/hmmer:3.4--hdbdd923_1"
+    ]
+  },
+  "source": {
+    "repository": "https://github.com/EddyRivasLab/hmmer",
+    "ref": "hmmer-3.4"
+  },
+  "version": {
+    "value": "3.4",
+    "basis": "found",
+    "note": "reported by `hmmsearch -h`"
+  },
+  "session": {
+    "sdk_session_id": "sess_01HQZR8W3Y6A9C2E5G7J0M3P",
+    "resumable": true,
+    "resume_hint": "Stopped by a guardrail before conformance ran."
+  },
+  "promotable": [
+    "manifest.json"
+  ],
+  "rejected_files": [
+    {
+      "path": "patch_runner.sh",
+      "why": "not in the promotable allowlist - the runner is not the agent's to change"
+    }
+  ],
+  "manifest": null,
+  "conformance": {
+    "passed": false,
+    "checks": 0,
+    "error": "not run - guardrails tripped first"
+  },
+  "guardrails": [
+    "repository changed outside staging: tools/porttypes.json was modified",
+    "repository changed outside staging: tools/runner/run.py was modified"
+  ],
+  "port_types_used": [
+    {
+      "operation": "search",
+      "port": "profile",
+      "type": "Text"
+    },
+    {
+      "operation": "search",
+      "port": "sequences",
+      "type": "Sequence"
+    },
+    {
+      "operation": "search",
+      "port": "hits",
+      "type": "Text"
+    }
+  ],
+  "license": {
+    "value": "BSD-3-Clause",
+    "basis": "found",
+    "note": "LICENSE at the repository root"
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/hmmer:3.4--hdbdd923_1",
+      "command": "hmmsearch -h",
+      "exit_code": 0,
+      "ms": 264
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "search.profile"
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "search.hits"
+    }
+  ]
+}

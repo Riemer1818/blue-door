@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...and we do opt in for the example. It carries no secrets, only the variable
+# names and the reasoning behind them, and an example nobody can clone is not
+# one. The real .env.local stays ignored by the line above.
+!.env*.example
 
 # vercel
 .vercel
@@ -39,3 +43,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local blob store and run staging. Both are content the app writes at runtime,
+# not source; BLOB_DIR and RUN_STAGING_DIR move them in a deployment.
+.blobs/
+.runs/

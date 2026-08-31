@@ -9,6 +9,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Json = JsonValue;
 
 export type JsonArray = JsonValue[];
@@ -20,6 +22,8 @@ export type JsonObject = {
 export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
+export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
@@ -57,6 +61,34 @@ export interface DashboardWidgets {
   widgetType: string | null;
 }
 
+export interface Files {
+  /**
+   * NULL means not applicable - the file is not sequence-shaped, so the question
+   *    does not arise. That is a different statement from the value 'not_sequence',
+   *    which means the question was asked of something that turned out not to be a
+   *    sequence, and both differ from 'ambiguous', which means asked and unresolved.
+   */
+  alphabet: string | null;
+  /**
+   * From the shared rule in tools/porttypes.json, implemented twice - by
+   *    tools/runner/alphabet.py and web/src/server/tools/detect.ts - and held to one
+   *    behaviour by the corpus at tools/corpus/alphabet.
+   */
+  alphabetConfidence: string | null;
+  blobKey: string;
+  byteSize: Int8;
+  contentHash: string;
+  createdAt: Generated<Timestamp>;
+  detection: string | null;
+  nodeId: string;
+  portFormat: string | null;
+  /**
+   * Port type detected on upload, or NULL when nothing in the vocabulary matched.
+   *    Format is meaningless without it, so the two are set and cleared together.
+   */
+  portType: string | null;
+}
+
 export interface GridBreakpoints {
   cols: number;
   minWidth: number;
@@ -79,6 +111,25 @@ export interface Nodes {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface Runs {
+  adapterId: string;
+  eventsPath: string | null;
+  finishedAt: Timestamp | null;
+  id: string;
+  operation: string;
+  /**
+   * NULL while running. Values come from tools/outcomes.json - deliberately not
+   *    constrained here, because that file is the vocabulary and a check constraint
+   *    would be a second statement of it.
+   */
+  outcome: string | null;
+  outputParent: string | null;
+  ownerId: string;
+  result: Json | null;
+  startedAt: Generated<Timestamp>;
+  wallSeconds: Numeric | null;
+}
+
 export interface SchemaMigrations {
   appliedAt: Generated<Timestamp>;
   version: string;
@@ -87,6 +138,24 @@ export interface SchemaMigrations {
 export interface Surfaces {
   displayName: string;
   name: string;
+}
+
+export interface TreeFiles {
+  alphabet: string | null;
+  alphabetConfidence: string | null;
+  blobKey: string | null;
+  byteSize: Int8 | null;
+  contentHash: string | null;
+  createdAt: Timestamp | null;
+  detection: string | null;
+  id: string | null;
+  name: string | null;
+  ownerId: string | null;
+  parentId: string | null;
+  portFormat: string | null;
+  portType: string | null;
+  position: number | null;
+  updatedAt: Timestamp | null;
 }
 
 export interface Users {
@@ -140,10 +209,13 @@ export interface DB {
   dashboards: Dashboards;
   dashboardWidgetLayouts: DashboardWidgetLayouts;
   dashboardWidgets: DashboardWidgets;
+  files: Files;
   gridBreakpoints: GridBreakpoints;
   nodes: Nodes;
+  runs: Runs;
   schemaMigrations: SchemaMigrations;
   surfaces: Surfaces;
+  treeFiles: TreeFiles;
   users: Users;
   widgetInstances: WidgetInstances;
   widgetLayouts: WidgetLayouts;
