@@ -6,6 +6,7 @@ import {
   CircleAlert,
   Copy,
   FileWarning,
+  Puzzle,
   ShieldAlert,
   TriangleAlert,
 } from "lucide-react";
@@ -131,11 +132,18 @@ export function WrapReview({ runId }: { runId: string }) {
           <div className="flex flex-col gap-3">
             {report.caveats.map((caveat, i) => (
               <div key={`${caveat.kind}-${i}`} className="flex gap-2.5">
-                <TriangleAlert
-                  size={14}
-                  className="mt-0.5 shrink-0 text-amber-500"
-                  aria-hidden
-                />
+                {/* A vocabulary gap is not a defect in the adapter — the fix is
+                    in porttypes.json, by a different person. It should not wear
+                    the same warning colour as "you took a shortcut". */}
+                {caveat.kind === "vocabulary_gap" ? (
+                  <Puzzle size={14} className="mt-0.5 shrink-0 text-sky-500" aria-hidden />
+                ) : (
+                  <TriangleAlert
+                    size={14}
+                    className="mt-0.5 shrink-0 text-amber-500"
+                    aria-hidden
+                  />
+                )}
                 <div className="min-w-0">
                   <p className="font-mono text-xs text-slate-700 dark:text-slate-200">
                     {caveat.kind}
@@ -152,6 +160,52 @@ export function WrapReview({ runId }: { runId: string }) {
           </div>
         )}
       </Section>
+
+      {/* The constructive half of a vocabulary gap. Sits next to the caveats
+          that raised it, because the two are one finding: "no type fits" and
+          "here is the type that would". */}
+      {report.proposals.length > 0 && (
+        <Section title={`Proposed port types (${report.proposals.length})`}>
+          <p className="mb-3 text-xs text-slate-600 dark:text-slate-300">
+            The agent needed a type the vocabulary does not have. These are requests to extend{" "}
+            <span className="font-mono">porttypes.json</span> — a change to shared vocabulary, which
+            is reviewed separately and never auto-merged, because a bad type breaks every pipeline
+            that touches it rather than one tool.
+          </p>
+          <div className="flex flex-col gap-3">
+            {report.proposals.map((proposal) => (
+              <div key={proposal.name}>
+                <p className="font-mono text-xs font-medium text-sky-700 dark:text-sky-400">
+                  {proposal.name}
+                </p>
+                {proposal.describes && (
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    {proposal.describes}
+                  </p>
+                )}
+                {proposal.howToRecognise && (
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    <span className="text-slate-400">Recognised by: </span>
+                    {proposal.howToRecognise}
+                  </p>
+                )}
+                {proposal.ports.length > 0 && (
+                  <p className="mt-1 flex flex-wrap gap-1">
+                    {proposal.ports.map((port) => (
+                      <span
+                        key={port}
+                        className="rounded bg-sky-50 px-1.5 py-0.5 font-mono text-xs text-sky-800 dark:bg-sky-950/50 dark:text-sky-300"
+                      >
+                        {port}
+                      </span>
+                    ))}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Conformance">
         <p className="mb-2 flex items-center gap-2 text-xs">

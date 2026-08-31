@@ -34,6 +34,23 @@ export type Stated = {
   note?: string;
 };
 
+/**
+ * A port type the agent needed and the vocabulary does not have.
+ *
+ * The distinction this carries is the difference between two things that look
+ * identical on the page: a port typed `Text` because nobody looked for a better
+ * fit, and one typed `Text` because no fit exists. The second is a request to
+ * extend `porttypes.json` — a different fix, in a different file, aimed at a
+ * different person — and a proposal is what makes it actionable rather than a
+ * complaint.
+ */
+export type Proposal = {
+  name: string;
+  describes?: string;
+  ports: string[];
+  howToRecognise?: string;
+};
+
 export type Caveat = {
   /**
    * `license_unknown` | `text_fallback` | `ambiguous_image` | `untested_path`,
@@ -128,6 +145,8 @@ export type WrapReport = {
     ms?: number;
   }[];
   caveats: Caveat[];
+  /** Empty on reports written before the agent could declare one. */
+  proposals: Proposal[];
 };
 
 const BASES = new Set(["found", "assumed", "unknown"]);
@@ -216,6 +235,16 @@ function normalise(raw: Record<string, unknown>): WrapReport {
       ms: p.ms,
     })),
     caveats: (raw.caveats as Caveat[]) ?? [],
+    proposals: (
+      (raw.proposals as
+        | { name: string; describes?: string; ports?: string[]; how_to_recognise?: string }[]
+        | undefined) ?? []
+    ).map((p) => ({
+      name: p.name,
+      describes: p.describes,
+      ports: p.ports ?? [],
+      howToRecognise: p.how_to_recognise,
+    })),
   };
 }
 
