@@ -16,6 +16,10 @@ Outcomes are typed, and the taxonomy matters more than it looks:
     nonzero_exit    the tool reported failure honestly
     timeout         exceeded the operation's declared budget
     oom             killed against the machine class memory cap
+    precondition_failed
+                    an input does not satisfy what the operation requires, so it
+                    was never run. Not the tool's failure and not ours - the
+                    wrong kind of file was supplied
     missing_output  a declared output is absent or empty - regardless of exit code
     type_mismatch   an output exists but is not the declared type
     image_missing   the container image could not be obtained - infrastructure,
@@ -35,6 +39,8 @@ import subprocess
 import sys
 import tempfile
 import time
+
+from alphabet import detect as detect_alphabet
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PORT_TYPES = json.loads((ROOT / "porttypes.json").read_text())["types"]
@@ -119,6 +125,33 @@ def sniff(path, port):
     return False, "file is empty"
 
 
+def check_preconditions(op, inputs) -> list[str]:
+    """Enforce `requires` before running anything.
+
+    Deliberately here rather than in the caller. pipe.py checked constraints and
+    run.py did not, so feeding a protein alignment straight to fasttree.infer
+    returned `ok` and a tree computed under a nucleotide model - the pipeline
+    path was closed while the single-operation path, which is the one the
+    executor uses, stayed open. A check a caller can forget is a check that will
+    be forgotten; deriving it from the manifest at the point of execution makes
+    the omission impossible.
+    """
+    problems = []
+    for name, port in op.get("inputs", {}).items():
+        required = (port.get("requires") or {}).get("alphabet")
+        if not required or name not in inputs:
+            continue
+        found = detect_alphabet(pathlib.Path(inputs[name]).read_text(errors="replace"))
+        actual = found["alphabet"]
+        ok = (actual in ("dna", "rna") if required == "nucleotide" else actual == required)
+        if not ok:
+            problems.append(
+                f"{name}: needs {required}, supplied file is {actual}"
+                f" ({found['why']})"
+            )
+    return problems
+
+
 def limits_for(machine_class):
     """Resource caps, clamped to what this workstation can honour.
 
@@ -139,6 +172,15 @@ def run_operation(adapter_dir, op_name, inputs, workdir=None, keep=False):
     adapter_dir = pathlib.Path(adapter_dir)
     manifest = json.loads((adapter_dir / "manifest.json").read_text())
     op = manifest["operations"][op_name]
+
+    if failures := check_preconditions(op, inputs):
+        return {
+            "adapter": manifest["id"], "operation": op_name,
+            "outcome": "precondition_failed", "problems": failures,
+            "wall_seconds": 0.0, "exit_code": None, "outputs": {},
+            "machine_class": manifest["machine_class"],
+            "stdout": "", "stderr": "", "workdir": None,
+        }
 
     work = pathlib.Path(workdir or tempfile.mkdtemp(prefix="doorway-"))
     (work / "in").mkdir(parents=True, exist_ok=True)

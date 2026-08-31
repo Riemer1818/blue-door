@@ -53,6 +53,9 @@ TOOL_OUTCOMES = {
     "nonzero_exit": "the tool reported failure honestly",
     "timeout": "exceeded the declared budget",
     "oom": "killed against the machine class memory cap",
+    "precondition_failed": "an input did not satisfy what the operation requires, "
+                           "so it never ran - the wrong kind of file, not a tool "
+                           "or platform failure",
     "missing_output": "a declared output is absent or empty, whatever the exit code",
     "type_mismatch": "an output exists but is not the declared type",
     "image_missing": "the image could not be obtained - infrastructure, not the tool",
