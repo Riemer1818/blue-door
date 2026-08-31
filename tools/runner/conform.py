@@ -124,10 +124,31 @@ def static_checks(manifest, adapter_dir):
             side = "inputs" if key == "stdin" else "outputs"
             if ref and ref not in op.get(side, {}):
                 problems.append(f"{op_name}: {key} names '{ref}', which is not a declared {side[:-1]} port")
-        if "measured" in manifest:
-            cap_gb = int(MACHINE_CLASSES["classes"][manifest["machine_class"]]["memory"].rstrip("g"))
-            if manifest["measured"].get("peak_rss_mb", 0) > cap_gb * 1024:
-                problems.append("measured peak_rss_mb exceeds the declared machine class")
+    if "measured" in manifest and manifest["measured"].get("peak_rss_mb"):
+        peak = manifest["measured"]["peak_rss_mb"]
+        cap_mb = int(MACHINE_CLASSES["classes"][manifest["machine_class"]]
+                     ["memory"].rstrip("g")) * 1024
+        if peak > cap_mb:
+            problems.append(
+                f"measured peak {peak} MB exceeds the {manifest['machine_class']} "
+                f"cap of {cap_mb} MB - this adapter will OOM"
+            )
+        elif peak * 8 < cap_mb:
+            # Over-provisioning is not dangerous, so it warns rather than fails.
+            # But it is not free either: a class is what gets scheduled and paid
+            # for, and an adapter measured at 5 MB asking for 16 GB will sit in
+            # the batch lane waiting for a machine it never needed.
+            smallest = next(
+                (n for n, sp in MACHINE_CLASSES["classes"].items()
+                 if "gpu" not in n and int(sp["memory"].rstrip("g")) * 1024 >= peak * 1.5),
+                None,
+            )
+            if smallest and smallest != manifest["machine_class"]:
+                warnings.append(
+                    f"measured peak {peak} MB against a {manifest['machine_class']} "
+                    f"class; '{smallest}' would fit with 50% headroom "
+                    f"(fixture: {manifest['measured'].get('fixture')})"
+                )
     return problems, warnings
 
 
