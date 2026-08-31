@@ -133,22 +133,17 @@ def static_checks(manifest, adapter_dir):
                 f"measured peak {peak} MB exceeds the {manifest['machine_class']} "
                 f"cap of {cap_mb} MB - this adapter will OOM"
             )
-        elif peak * 8 < cap_mb:
-            # Over-provisioning is not dangerous, so it warns rather than fails.
-            # But it is not free either: a class is what gets scheduled and paid
-            # for, and an adapter measured at 5 MB asking for 16 GB will sit in
-            # the batch lane waiting for a machine it never needed.
-            smallest = next(
-                (n for n, sp in MACHINE_CLASSES["classes"].items()
-                 if "gpu" not in n and int(sp["memory"].rstrip("g")) * 1024 >= peak * 1.5),
-                None,
-            )
-            if smallest and smallest != manifest["machine_class"]:
-                warnings.append(
-                    f"measured peak {peak} MB against a {manifest['machine_class']} "
-                    f"class; '{smallest}' would fit with 50% headroom "
-                    f"(fixture: {manifest['measured'].get('fixture')})"
-                )
+        # NOTHING WARNS ABOUT OVER-PROVISIONING, deliberately. Declaring a class
+        # larger than measured is safe, and right-sizing it is optimisation we are
+        # not doing yet - so a warning on every adapter would fire constantly,
+        # never be acted on, and teach people to skip warnings. The same argument
+        # that made ambiguous_image firing on every correctly-pinned run a real
+        # problem rather than a cosmetic one.
+        #
+        # `measured` is still recorded. When provisioning is worth optimising the
+        # evidence is already there, and profile.py --suggest-class answers on
+        # demand. Under-provisioning stays a hard failure above: too small is an
+        # OOM, too large is a bill nobody is reading yet.
     return problems, warnings
 
 
