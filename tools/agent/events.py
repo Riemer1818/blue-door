@@ -31,18 +31,45 @@ from typing import Any, Callable
 # Event kinds. Keep this list closed and short; a vocabulary nobody can hold in
 # their head gets bypassed with log.line, and then the UI is a terminal again.
 KINDS = {
-    "run.started": "kind (agent|tool|pipeline), subject",
+    "run.started": "kind, subject, machine_class?, limits?, parent_run_id?, step?",
     "phase.started": "phase",
-    "phase.finished": "phase, seconds, ok",
-    "probe.ran": "command, exit_code, ms - what the agent tried and what happened",
+    "phase.finished": "phase, status (ok|failed|skipped), seconds",
+    "probe.ran": "image, command, exit_code, ms - image included because the command alone reproduces nothing",
     "image.built": "reference, digest, seconds",
     "manifest.drafted": "operations, port_types, iteration",
     "conformance.result": "passed, failed, failures[] - the reward signal",
     "artifact.written": "path, bytes",
     "note": "text - the agent's own commentary, for a human reading along",
     "log.line": "stream (stdout|stderr), text",
-    "run.finished": "outcome, seconds",
+    "log.truncated": "stream, dropped - its own event, never a marker inside the text",
+    "run.finished": "outcome, seconds, outputs? - outcome vocabulary depends on run kind",
 }
+
+# Two vocabularies, deliberately separate. A tool run and an agent run do not end
+# in the same kind of thing, and collapsing them into one `outcome` field forces a
+# console to guess which it is holding.
+TOOL_OUTCOMES = {
+    "ok": "declared outputs exist, are non-empty, and detect as the declared type",
+    "nonzero_exit": "the tool reported failure honestly",
+    "timeout": "exceeded the declared budget",
+    "oom": "killed against the machine class memory cap",
+    "missing_output": "a declared output is absent or empty, whatever the exit code",
+    "type_mismatch": "an output exists but is not the declared type",
+    "image_missing": "the image could not be obtained - infrastructure, not the tool",
+}
+
+AGENT_OUTCOMES = {
+    "conformant": "adapter drafted and passing conform.py, ready for review",
+    "needs_review": "conformant, but with a caveat a human should see - unknown "
+                    "license, or a port that fell back to the Text escape hatch",
+    "gave_up": "could not produce a conformant adapter; the report says what it "
+               "could not determine. The honest outcome, and far better than a "
+               "plausible adapter nobody can trust",
+    "rejected": "the run touched files outside its own adapter directory and was "
+                "discarded. A guardrail trip, not a tool problem",
+}
+
+OUTCOMES = {"tool": TOOL_OUTCOMES, "pipeline": TOOL_OUTCOMES, "agent": AGENT_OUTCOMES}
 
 # Phases of an adapter-agent run, in order. Named here rather than in the prompt
 # so the UI can render the whole checklist before the agent has reached step two -
@@ -57,6 +84,10 @@ class Run:
     kind: str
     subject: str
     sink: Callable[[dict], None] | None = None
+    machine_class: str | None = None
+    limits: dict | None = None
+    parent_run_id: str | None = None
+    step: str | None = None
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     started: float = field(default_factory=time.time)
     _seq: int = 0
@@ -66,7 +97,23 @@ class Run:
     def __post_init__(self):
         if self.sink is None:
             self.sink = jsonl_sink(sys.stdout)
-        self.emit("run.started", {"kind": self.kind, "subject": self.subject})
+        if self.kind not in OUTCOMES:
+            raise ValueError(f"unknown run kind '{self.kind}' - expected {sorted(OUTCOMES)}")
+        # machine_class and limits ride on run.started because run.py computes
+        # `clamped_locally` precisely so an unreported clamp cannot turn a real OOM
+        # into a mysterious one. If the clamp does not reach the stream, a `deep`
+        # job that OOMs on a workstation reads as "wrong machine class" when the
+        # truth is that the workstation could not honour the class at all.
+        self.emit("run.started", {
+            k: v for k, v in {
+                "kind": self.kind,
+                "subject": self.subject,
+                "machine_class": self.machine_class,
+                "limits": self.limits,
+                "parent_run_id": self.parent_run_id,  # a pipeline nests its step runs
+                "step": self.step,
+            }.items() if v is not None
+        })
 
     def emit(self, kind: str, payload: dict[str, Any] | None = None) -> dict:
         """Envelope fields stay flat; everything else nests under `payload`.
@@ -99,29 +146,46 @@ class Run:
     def note(self, text: str) -> None:
         self.emit("note", {"text": text})
 
-    def finish(self, outcome: str) -> dict:
-        return self.emit("run.finished", {
-            "outcome": outcome,
-            "seconds": round(time.time() - self.started, 3),
-        })
+    def finish(self, outcome: str, outputs: dict | None = None) -> dict:
+        """Outcome is validated against this run's kind, so an agent run cannot
+        quietly emit a tool outcome into a field a console types by kind."""
+        allowed = OUTCOMES[self.kind]
+        if outcome not in allowed:
+            raise ValueError(
+                f"'{outcome}' is not a valid {self.kind}-run outcome"
+                f" - expected {sorted(allowed)}"
+            )
+        payload = {"outcome": outcome, "seconds": round(time.time() - self.started, 3)}
+        if outputs is not None:
+            payload["outputs"] = outputs  # per-output bytes and detection, from run.py
+        return self.emit("run.finished", payload)
 
 
 class _Phase:
     def __init__(self, run: Run, name: str):
-        self.run, self.name = run, name
+        self.run, self.name, self.status = run, name, "ok"
+
+    def skip(self, why: str) -> None:
+        """Mark this phase skipped rather than done. Caller explains why."""
+        self.status = "skipped"
+        self.run.note(f"{self.name} skipped: {why}")
 
     def __enter__(self):
         self.started = time.time()
         self.run.emit("phase.started", {"phase": self.name})
-        return self.run
+        return self
 
     def __exit__(self, exc_type, exc, tb):
         # A phase that raised still gets a finished event. A progress view whose
         # steps can hang forever on failure is worse than one that shows an error.
+        # Tri-state, not a boolean. "skipped" is real - acquire is skipped when a
+        # published container already exists - and a console that renders skipped
+        # as failed is lying. Status is on the event rather than inferred, because
+        # failed phases expand by default.
         self.run.emit("phase.finished", {
             "phase": self.name,
+            "status": self.status if exc_type is None else "failed",
             "seconds": round(time.time() - self.started, 3),
-            "ok": exc_type is None,
         })
         return False
 
