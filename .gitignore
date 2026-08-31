@@ -1,0 +1,20 @@
+# Secrets — never commit
+.mcp.json
+.env
+.env.local
+infra/terraform/*.auto.tfvars
+!infra/terraform/*.auto.tfvars.example
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/.terraform.lock.hcl
+
+# Node
+node_modules/
+.next/
+next-env.d.ts
+
+# OS
+.DS_Store

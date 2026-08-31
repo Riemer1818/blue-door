@@ -1,0 +1,33 @@
+# Local Postgres that mirrors the Scaleway managed instance closely enough for
+# row-level security to behave identically: same engine major, and the app
+# connects as a non-owner role here too. If RLS is wrong, it is wrong locally.
+#
+#   docker compose -f docker-compose.local.yml up -d
+#   ./db/apply.sh
+#   ./db/seed-dev.sh
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bluedoor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bluedoor
+      # The runtime role's local password. Mirrors what Terraform generates in
+      # the cloud; only ever a local-development value.
+      BLUEDOOR_APP_PASSWORD: bluedoor_app
+    ports:
+      # 5433 so it cannot collide with a Postgres already on 5432.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/local/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bluedoor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "linear-bluedoor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@tacticlaunch/mcp-linear"
+      ],
+      "env": {
+        "LINEAR_API_TOKEN": "REPLACE_WITH_BLUEDOOR_LINEAR_API_KEY"
+      }
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--isolated",
+        "--browser",
+        "chrome"
+      ]
+    }
+  }
+}

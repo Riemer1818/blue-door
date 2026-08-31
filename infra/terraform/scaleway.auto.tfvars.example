@@ -1,0 +1,17 @@
+# Copy to `scaleway.auto.tfvars` (Terraform auto-loads *.auto.tfvars) and fill in.
+# That file holds CREDENTIALS and is gitignored. Never paste these into chat,
+# commits or tickets. Rotate the key pair if one leaks.
+
+access_key      = "SCWXXXXXXXXXXXXXXXXX"
+secret_key      = "00000000-0000-0000-0000-000000000000"
+organization_id = "00000000-0000-0000-0000-000000000000"
+project_id      = "00000000-0000-0000-0000-000000000000"
+
+region      = "fr-par"
+environment = "dev"
+
+# Nothing can connect until this list has entries. Your current egress IP:
+#   curl -s https://ifconfig.me
+allowed_cidrs = [
+  # "203.0.113.7/32",
+]
