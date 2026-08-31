@@ -22,7 +22,7 @@ import pathlib
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-SCHEMA_VERSION = "0.1"
+SCHEMA_VERSION = "0.2"  # 0.2 added version{}, session{}, image.candidates
 
 
 def stated(value, basis: str, note: str = "") -> dict:

@@ -74,9 +74,20 @@ class Workspace:
         # all, so any difference from the pre-run snapshot is a trip, not a diff to
         # review. This catches an edit to the runner, the schema or another adapter
         # - the changes that would let a bad adapter appear to pass.
-        if self._git_state() != self.repo_state:
+        before = set(self.repo_state.splitlines())
+        after = set(self._git_state().splitlines())
+        if changed := sorted(after - before):
+            # Name the paths. This check cannot attribute a change - concurrent
+            # work by a human in the same worktree trips it exactly as an agent
+            # writing to the repo would, and that false positive happened on the
+            # very first real run. Being conservative is still right; being
+            # conservative and mute is not. In production the repository is
+            # read-only to the agent and this is a backstop rather than the
+            # primary defence.
             problems.append(
-                "the repository changed during the run; the agent must work only in staging"
+                "the repository changed during the run (the agent must work only in "
+                f"staging): {'; '.join(changed[:8])}"
+                + (f" and {len(changed) - 8} more" if len(changed) > 8 else "")
             )
 
         manifest_path = self.adapter / "manifest.json"

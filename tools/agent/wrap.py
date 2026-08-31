@@ -145,14 +145,26 @@ def build_toolset(run: E.Run, state: dict):
     async def list_machine_classes(args):
         return _text(M.list_machine_classes())
 
-    @tool("record", "Record a fact for the report: license, version, or a caveat.",
+    @tool("record", "Record a fact for the report: license, version, or a caveat. "
+          "Use field='caveat' for anything you could not establish.",
           {"field": str, "value": str, "basis": str, "note": str})
     async def record(args):
-        state.setdefault("recorded", {})[args["field"]] = {
-            "value": args.get("value"), "basis": args.get("basis", "unknown"),
-            "note": args.get("note", ""),
-        }
-        run.note(f"recorded {args['field']}: {args.get('value')} ({args.get('basis')})")
+        field = args["field"]
+        if field == "caveat":
+            # Caveats accumulate; facts are keyed. Storing both in one dict meant
+            # the second caveat overwrote the first and none were read back at
+            # all - the agent volunteered three on the first real run and the
+            # report carried none of them.
+            state.setdefault("volunteered", []).append(
+                {"kind": args.get("basis") or "agent_note",
+                 "detail": args.get("value") or args.get("note", ""),
+                 "where": ""})
+        else:
+            state.setdefault("recorded", {})[field] = {
+                "value": args.get("value"), "basis": args.get("basis", "unknown"),
+                "note": args.get("note", ""),
+            }
+        run.note(f"recorded {field}: {str(args.get('value'))[:90]}")
         return {"content": [{"type": "text", "text": "recorded"}]}
 
     return [set_phase, validate_manifest, probe, check_conformance, find_image,
@@ -281,6 +293,7 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
         rep.conformance = conformance
         rep.guardrails = guardrails
         rep.probes = state.get("probes", [])
+        rep.caveats = state.get("volunteered", [])
         rep.port_types_used = [
             {"operation": op_name, "port": port_name, "type": port["type"]}
             for op_name, op in ((manifest or {}).get("operations") or {}).items()
@@ -290,7 +303,8 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
         rep.promotable = sorted(str(p.relative_to(workspace.adapter))
                                 for p in workspace.adapter.rglob("*") if p.is_file())
         rep.session = {"sdk_session_id": state.get("sdk_session_id"),
-                       "resumable": bool(state.get("sdk_session_id")),
+                       "resumable": False,  # set true once the archive exists
+                       "archive": None,
                        "resume_hint": state.get("resume_hint", "")}
 
         if guardrails and any("repository changed" in g for g in guardrails):
@@ -302,15 +316,27 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
         else:
             rep.outcome = "conformant"
 
-        report_path = rep.write(workspace.staging / "report.json")
+        # A durable, listable home per run. The web app enumerates this
+        # directory; nothing it needs is inside a tarball.
+        run_dir = workspace.root / "tools" / ".runs" / run.run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        report_path = rep.write(run_dir / "report.json")
         run.emit("artifact.written", {"path": str(report_path),
                                       "bytes": report_path.stat().st_size})
 
-        archive = None
-        if rep.outcome != "conformant" or keep:
-            runs_dir = workspace.root / "tools" / ".runs"
-            archive = RES.archive(workspace, report_path, events_path, runs_dir)
-            run.note(f"state archived for resume: {archive}")
+        # Always archive, never conditionally. resumable was previously derived
+        # from the session id while the archive was written only for non-clean
+        # outcomes, so a conformant run advertised a resume with nothing behind
+        # it. Worse, conformant is the case where revise is the ONLY remaining
+        # path: a Text fallback or unknown license already forces needs_review,
+        # so a reviewer looking at a clean report who wants an operation renamed
+        # had no route at all. The archive is deliberately small; storing one per
+        # run is unremarkable.
+        archive = RES.archive(workspace, report_path, events_path, run_dir)
+        rep.session["resumable"] = True
+        rep.session["archive"] = str(archive)
+        rep.write(report_path)
+        run.note(f"state archived for resume: {archive}")
 
     run.finish(rep.outcome)
     if keep or rep.outcome != "conformant":
