@@ -72,7 +72,36 @@ AGENT_OUTCOMES = {
                 "discarded. A guardrail trip, not a tool problem",
 }
 
+# Outcomes grouped by WHAT A PERSON DOES NEXT, which is the only grouping that
+# earns its keep in a UI. bluedoor-4b's framing, and it is better than grouping
+# by what went wrong: `precondition_failed` and `oom` are both "the run did not
+# produce a result", but one is fixed by choosing a different file and the other
+# by us. Telling someone to wait when they are one dropdown from done is a worse
+# error than not grouping at all.
+OUTCOME_ACTION = {
+    "ok": "nothing",
+    "precondition_failed": "choose a different file",
+    "nonzero_exit": "look at the data, or the tool",
+    "missing_output": "look at the data, or the tool",
+    "oom": "nothing; we fix it",
+    "image_missing": "nothing; we fix it",
+    "type_mismatch": "nothing; we fix it",
+    # Timeout is the awkward one, and it was missing from both our tables until
+    # the assertion below caught it. Mostly ours: the budget is declared in the
+    # manifest, so overrunning it usually means the declaration or the machine
+    # class was wrong. But a genuinely enormous input can overrun a correct
+    # budget, which is the user's to change. Filed under ours because a user told
+    # to shrink their data when the manifest is simply wrong has been misdirected,
+    # and that is the more common case by far.
+    "timeout": "nothing; we fix it",
+}
+
 OUTCOMES = {"tool": TOOL_OUTCOMES, "pipeline": TOOL_OUTCOMES, "agent": AGENT_OUTCOMES}
+
+assert set(OUTCOME_ACTION) == set(TOOL_OUTCOMES), (
+    "every tool outcome needs an action, or a UI grouping by action will silently "
+    "drop it into whichever bucket happens to be last"
+)
 
 # Phases of an adapter-agent run, in order. Named here rather than in the prompt
 # so the UI can render the whole checklist before the agent has reached step two -
