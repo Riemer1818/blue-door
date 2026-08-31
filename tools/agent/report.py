@@ -49,7 +49,8 @@ def stated(value, basis: str, note: str = "") -> dict:
 CAVEAT_KINDS = {
     "license_unknown": "license was not read from the artefact",
     "version_unknown": "version was not read from the artefact",
-    "text_fallback": "a port fell back to the Text escape hatch",
+    "text_fallback": "a port fell back to Text although a real type may fit",
+    "vocabulary_gap": "a port fell back to Text because NO type covers this data",
     "ambiguous_image": "the image choice was the agent's own judgement call",
     "untested_path": "something about the build could not be tied to a digest",
     "agent_note": "volunteered by the agent; free-form",
@@ -100,6 +101,10 @@ class Report:
     license: dict = field(default_factory=dict)      # value + found|assumed|unknown
     probes: list = field(default_factory=list)       # image, command, exit_code, ms
     caveats: list = field(default_factory=list)
+    # Port types the vocabulary is missing. Distinct from caveats because the fix
+    # is in porttypes.json rather than in this adapter, which makes it a different
+    # action for a different person.
+    proposals: list = field(default_factory=list)
 
     def add_caveat(self, kind: str, detail: str, where: str = "") -> None:
         """Caveats the agent volunteers. Derived ones are computed separately."""
@@ -133,8 +138,23 @@ class Report:
                        " looked at." if name == "license" else ""),
                 )
 
+        proposed_ports = {
+            p for proposal in self.proposals for p in proposal.get("ports", [])
+        }
         for port in self.port_types_used:
             if port.get("type") != "Text":
+                continue
+            # Two populations, and they are not the same request. "A real type
+            # probably fits" is a revision to this adapter; "no type exists" is a
+            # change to the shared vocabulary, decided by someone else entirely.
+            label = f"{port.get('operation')}.{port.get('port')}"
+            if label in proposed_ports or port.get("port") in proposed_ports:
+                note("vocabulary_gap",
+                     "typed as Text because no port type covers this data. The agent "
+                     "proposed a new type rather than forcing a wrong one - see "
+                     "`proposals`. Fixing this means extending porttypes.json, not "
+                     "editing this adapter.",
+                     where=f"{label} ({port.get('direction', 'unknown')})")
                 continue
             # A Text output and a Text input are not the same failure. An output
             # nothing can consume is the composability break this caveat exists

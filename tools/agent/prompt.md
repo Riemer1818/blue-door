@@ -62,9 +62,17 @@ can use to build a fixture when the user supplied no data of their own.
 **`Text` is an escape hatch and using it is close to failing.** An adapter that
 types its outputs as `Text` passes conformance and composes with nothing — the
 whole point is that a tool's output can be wired into another tool's input.
-Before reaching for it, check whether a real type fits, and if none does, propose
-one. Every `Text` port raises a caveat on your report regardless of whether you
-mention it, so there is nothing to gain by being quiet about it.
+Before reaching for it, check whether a real type fits. **If none does, call
+`propose_type`** — describe the type the vocabulary is missing, which ports
+needed it, how to recognise the data, and a sample. Then use `Text` and carry on.
+
+That distinction matters to whoever reads your report. "A real type probably fits
+and I did not look hard enough" is a fix to this adapter. "No type exists" is a
+change to the shared vocabulary, decided by a different person on a different
+timescale. Only you know which one you hit, so say so.
+
+Every `Text` port raises a caveat regardless of whether you mention it, so there
+is nothing to gain by being quiet about it.
 
 Types are not always distinguishable by their first line. Aligned FASTA and plain
 FASTA both start with `>`; what separates them is that every record in an

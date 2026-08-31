@@ -44,7 +44,7 @@ import workspace as W  # noqa: E402
 TOOLS_ROOT = HERE.parent
 
 
-def build_toolset(run: E.Run, state: dict):
+def build_toolset(run: E.Run, state: dict, workspace_scratch: pathlib.Path):
     """The doorway tools, each emitting an event as a side effect of being called.
 
     The agent cannot opt out of being observed: emission happens here, in the
@@ -171,9 +171,34 @@ def build_toolset(run: E.Run, state: dict):
         run.note(f"recorded {field}: {str(args.get('value'))[:90]}")
         return {"content": [{"type": "text", "text": "recorded"}]}
 
+    @tool("propose_type",
+          "Use ONLY when no existing port type covers a tool's data and you had to "
+          "fall back to Text. Describes the type the vocabulary is missing. This is "
+          "a request to a human, not a change you are making.",
+          {"name": str, "describes": str, "ports": list, "sample": str,
+           "how_to_recognise": str})
+    async def propose_type(args):
+        proposals = workspace_scratch / "proposals"
+        proposals.mkdir(parents=True, exist_ok=True)
+        name = "".join(c for c in args["name"] if c.isalnum() or c in "-_") or "unnamed"
+        (proposals / f"{name}.md").write_text(
+            f"# Proposed port type: {args['name']}\n\n"
+            f"{args.get('describes', '')}\n\n"
+            f"## Ports that needed it\n{', '.join(args.get('ports', []))}\n\n"
+            f"## How to recognise it\n{args.get('how_to_recognise', '')}\n\n"
+            f"## Sample\n```\n{args.get('sample', '')[:2000]}\n```\n"
+        )
+        state.setdefault("proposals", []).append(
+            {"name": args["name"], "describes": args.get("describes", ""),
+             "ports": args.get("ports", []),
+             "how_to_recognise": args.get("how_to_recognise", "")})
+        run.note(f"proposed port type {args['name']} for {args.get('ports')}")
+        return {"content": [{"type": "text", "text":
+                "recorded as a proposal for review; continue using Text for now"}]}
+
     return [set_phase, validate_manifest, probe, check_conformance, find_image,
             resolve_digest, find_description, list_port_types, list_machine_classes,
-            record]
+            record, propose_type]
 
 
 def _text(payload) -> dict:
@@ -222,13 +247,14 @@ async def run_agent(name: str, url: str | None, adapter_id: str, root: pathlib.P
         system_prompt=task,
         cwd=str(workspace.staging),
         mcp_servers={"doorway": create_sdk_mcp_server(
-            name="doorway", tools=build_toolset(run, state))},
+            name="doorway", tools=build_toolset(run, state, workspace.scratch))},
         allowed_tools=[
             "Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch",
             *[f"mcp__doorway__{t}" for t in
               ("set_phase", "validate_manifest", "probe", "check_conformance",
                "find_image", "resolve_digest", "find_description",
-               "list_port_types", "list_machine_classes", "record")],
+               "list_port_types", "list_machine_classes", "record",
+               "propose_type")],
         ],
         # Headless: there is no human to answer a prompt. The containment is the
         # staging cwd plus workspace.verify(), and in production an ephemeral VM.
@@ -322,6 +348,7 @@ def _finish(run, workspace, state, name, url, adapter_id, events_path, keep) -> 
         rep.guardrails = guardrails
         rep.probes = state.get("probes", [])
         rep.caveats = state.get("volunteered", [])
+        rep.proposals = state.get("proposals", [])
         rep.port_types_used = [
             {"operation": op_name, "port": port_name, "type": port["type"],
              "direction": "input" if side == "inputs" else "output"}
