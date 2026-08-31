@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderTree, LayoutDashboard } from "lucide-react";
+import { FolderTree, LayoutDashboard, Wrench } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { ThemeToggle } from "./theme-toggle";
 const VIEWS = [
   { href: "/", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/files", label: "Experiments", Icon: FolderTree },
+  { href: "/tools", label: "Tools", Icon: Wrench },
 ] as const;
 
 /**
