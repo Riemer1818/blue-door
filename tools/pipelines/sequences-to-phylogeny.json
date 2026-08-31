@@ -1,19 +1,26 @@
 {
   "id": "sequences-to-phylogeny",
-  "description": "Unaligned sequences to a tree. Three tools, three port types, two wires.",
+  "description": "NUCLEOTIDE ONLY. Unaligned DNA sequences to a tree. Three tools, three port types, two wires. fasttree.infer hardcodes -nt, and the type system cannot yet express that constraint - feeding this protein sequences produces a plausible tree under the wrong model with every check passing. See BLU-22.",
   "inputs": {
-    "sequences": { "type": "Sequence", "format": "fasta" }
+    "sequences": {
+      "type": "Sequence",
+      "format": "fasta"
+    }
   },
   "steps": [
     {
       "id": "align",
       "uses": "mafft.align",
-      "wire": { "sequences": "@input.sequences" }
+      "wire": {
+        "sequences": "@input.sequences"
+      }
     },
     {
       "id": "infer",
       "uses": "fasttree.infer",
-      "wire": { "alignment": "align.alignment" }
+      "wire": {
+        "alignment": "align.alignment"
+      }
     }
   ],
   "outputs": {
