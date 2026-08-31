@@ -103,19 +103,17 @@ export function WrapReview({ runId }: { runId: string }) {
               {line}
             </p>
           ))}
+          {/* The guardrail string carries its own diagnosis — the changed paths,
+              and on newer runs whether any agent tool call referenced them. All
+              this adds is the conformance context, which the string cannot know. */}
           <p className="mt-2 text-xs text-amber-800 dark:text-amber-300/90">
             {conformancePassed ? (
               <>
-                Conformance still passed {report.conformance.checks ?? 0} checks. The guardrail
-                cannot attribute a change, so concurrent work in the same worktree trips it exactly
-                as the agent writing outside staging would — this is not evidence the adapter is
-                wrong.
+                Conformance still passed {report.conformance.checks ?? 0} checks, so the adapter
+                itself is not what is in question here — this outcome is about containment.
               </>
             ) : (
-              <>
-                The check cannot attribute a change, so this does not on its own say the agent
-                misbehaved. The paths above are the diagnosis.
-              </>
+              <>Conformance did not pass either, so both are worth reading.</>
             )}
           </p>
         </div>
@@ -246,10 +244,19 @@ export function WrapReview({ runId }: { runId: string }) {
             it. Check whether a real type fits, or whether the vocabulary needs extending.
           </p>
         )}
-        {report.portTypesUsed.some((p) => p.type === "Text" && p.direction !== "output") && (
+        {report.portTypesUsed.some((p) => p.type === "Text" && p.direction === "input") && (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-500">
             Text is the escape hatch. An input typed with it accepts anything, so wiring into this
             operation is unchecked.
+          </p>
+        )}
+        {/* Reports written before ports carried a direction. Say the general
+            thing rather than guess — calling an output an input would be worse
+            than saying less. */}
+        {report.portTypesUsed.some((p) => p.type === "Text" && !p.direction) && (
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-500">
+            Text is the escape hatch. Anything typed with it composes with nothing — check whether a
+            real type fits, or whether the vocabulary needs extending.
           </p>
         )}
       </Section>

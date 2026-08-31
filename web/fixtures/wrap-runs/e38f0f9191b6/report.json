@@ -1,0 +1,648 @@
+{
+  "schema_version": "0.2",
+  "run_id": "e38f0f9191b6",
+  "adapter_id": "faster",
+  "requested": {
+    "name": "faster",
+    "url": "https://github.com/angelovangel/faster"
+  },
+  "outcome": "rejected",
+  "seconds": 538.2,
+  "image": {
+    "reference": "doorway/faster:0.2.5",
+    "digest": null,
+    "origin": "built_from_source",
+    "candidates": []
+  },
+  "source": {
+    "repository": "https://github.com/angelovangel/faster",
+    "ref": "master",
+    "commit": "21b9657c5214c6c6dbc5440c3378c3381036c9d6",
+    "image_origin": "built_from_source",
+    "dockerfile": "Dockerfile"
+  },
+  "version": {
+    "value": "0.2.5",
+    "basis": "found",
+    "note": "Self-reported by the built binary: `faster --help` inside the image prints \"faster 0.2.5\", and Cargo.toml at the pinned commit says version = \"0.2.5\". Both agree. CAVEAT on what this number means: the image is built from master at commit 21b9657 (2026-07-27), NOT from a release tag \u2014 `git describe --tags` finds no tag reachable from HEAD, and the version string is hardcoded twice (Cargo.toml and a literal .version(\"0.2.5\") in main.rs), so it does not advance with master. Master at this commit contains at least one feature not implied by a \"0.2.5\" release, the --dust low-complexity filter. Treat 0.2.5 as \"the string this build reports\", and the commit SHA in source.commit as the real identity."
+  },
+  "session": {
+    "sdk_session_id": "70cd0c82-a418-41fa-8f3f-83222204ac24",
+    "resumable": true,
+    "archive": "/home/thartist/Desktop/bluedoor-agent/tools/.runs/e38f0f9191b6/faster-report.tar.gz",
+    "resume_hint": ""
+  },
+  "promotable": [
+    "Dockerfile",
+    "fixtures/nanopore/expected/filter_length_min_1000/filtered.fastq",
+    "fixtures/nanopore/expected/filter_low_complexity/filtered.fastq",
+    "fixtures/nanopore/expected/filter_qscore_min_10/filtered.fastq",
+    "fixtures/nanopore/expected/gc_content/gc.txt",
+    "fixtures/nanopore/expected/mean_qscore/qscores.txt",
+    "fixtures/nanopore/expected/read_lengths/lengths.txt",
+    "fixtures/nanopore/expected/stats/summary.tsv",
+    "fixtures/nanopore/expected/subsample_half/sampled.fastq",
+    "fixtures/nanopore/expected/trim_front_10/trimmed.fastq",
+    "fixtures/nanopore/expected/trim_tail_10/trimmed.fastq",
+    "fixtures/nanopore/inputs/reads.fastq",
+    "manifest.json"
+  ],
+  "rejected_files": [],
+  "manifest": {
+    "id": "faster",
+    "version": "0.2.5",
+    "description": "Fast statistics and filtering for FASTQ files, written in Rust. Every mode writes its result to stdout; filtering modes emit FASTQ, the table mode emits a TSV. Notably it computes a correct 'mean' phred score (mean of base error probabilities converted back to phred) rather than the arithmetic mean of phred values.",
+    "homepage": "https://github.com/angelovangel/faster",
+    "license": "MIT",
+    "image": "doorway/faster:0.2.5",
+    "machine_class": "nano",
+    "operations": {
+      "stats": {
+        "description": "Per-file summary statistics: reads, bases, N bases, min/max/mean length, length quartiles, N50, and the percentage of bases at Q20 and Q30. Header row is printed by default; -s would suppress it. The first column is the input path as given, which is the runner's staging path.",
+        "command": [
+          "faster",
+          "--table",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "summary",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq",
+            "description": "FASTQ. Plain or gzip-compressed input is accepted by the tool, but this port stages a plain .fastq."
+          }
+        },
+        "outputs": {
+          "summary": {
+            "type": "Table",
+            "format": "tsv",
+            "description": "One row per input file, with a header row."
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "read_lengths": {
+        "description": "Length of every read, one integer per line, in input order.",
+        "command": [
+          "faster",
+          "--len",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "lengths",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "lengths": {
+            "type": "Text",
+            "format": "txt",
+            "description": "Headerless single column of integers, one per read. Typed Text because the vocabulary's Table requires a header row and its tsv sniffer requires a tab; see scratch/proposals/Column.md."
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "gc_content": {
+        "description": "GC fraction of every read (0.0-1.0), one value per line, in input order.",
+        "command": [
+          "faster",
+          "--gc",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "gc",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "gc": {
+            "type": "Text",
+            "format": "txt",
+            "description": "Headerless single column of floats, one per read. Text for the same reason as read_lengths."
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "mean_qscore": {
+        "description": "Per-read 'mean' phred score: the mean of the per-base error probabilities, converted back to a phred score. This is the calculation the tool exists to get right; a plain arithmetic mean of phred values is wrong.",
+        "command": [
+          "faster",
+          "--qscore",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "qscores",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "qscores": {
+            "type": "Text",
+            "format": "txt",
+            "description": "Headerless single column of phred scores to 4 decimal places, one per read. Text for the same reason as read_lengths."
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "filter_length_min_1000": {
+        "description": "Keep reads STRICTLY LONGER than 1000 bases. The threshold is baked in because the manifest schema has no parameter concept; upstream takes any integer via -f, and a negative integer inverts the test to 'shorter than'. Counts are reported on stderr, not in the output.",
+        "command": [
+          "faster",
+          "--filterl",
+          "1000",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "filtered",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "filtered": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "filter_qscore_min_10": {
+        "description": "Keep reads whose 'mean' phred score is STRICTLY GREATER than 10. Threshold baked in for the same reason as filter_length_min_1000.",
+        "command": [
+          "faster",
+          "--filterq",
+          "10",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "filtered",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "filtered": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "filter_low_complexity": {
+        "description": "Drop low-complexity reads using the DUST algorithm with a window of 64: keeps reads whose DUST score is at most 2.0. Threshold baked in for the same reason as filter_length_min_1000.",
+        "command": [
+          "faster",
+          "--dust",
+          "2.0",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "filtered",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "filtered": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "trim_front_10": {
+        "description": "Remove the first 10 bases of every read, sequence and quality alike. WARNING: upstream panics (exit 101) if any read is shorter than the trim length, after having already written the reads it got through. Trim count baked in for the same reason as filter_length_min_1000.",
+        "command": [
+          "faster",
+          "--trim_front",
+          "10",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "trimmed",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "trimmed": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "trim_tail_10": {
+        "description": "Remove the last 10 bases of every read, sequence and quality alike. Same short-read panic as trim_front_10.",
+        "command": [
+          "faster",
+          "--trim_tail",
+          "10",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "trimmed",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "trimmed": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 300
+      },
+      "subsample_half": {
+        "description": "Keep half the reads. Despite the name 'sub-sample' this is deterministic, not random: upstream accumulates the fraction and emits a read each time the accumulator reaches 1.0, so at 0.5 it keeps every second read. Fraction baked in for the same reason as filter_length_min_1000.",
+        "command": [
+          "faster",
+          "--sample",
+          "0.5",
+          "{{inputs.reads}}"
+        ],
+        "stdout": "sampled",
+        "inputs": {
+          "reads": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "outputs": {
+          "sampled": {
+            "type": "Sequence",
+            "format": "fastq"
+          }
+        },
+        "timeout_seconds": 600
+      }
+    },
+    "source": {
+      "repository": "https://github.com/angelovangel/faster",
+      "ref": "master",
+      "commit": "21b9657c5214c6c6dbc5440c3378c3381036c9d6",
+      "image_origin": "built_from_source",
+      "dockerfile": "Dockerfile"
+    },
+    "provenance": {
+      "authored_by": "claude-opus-4-adapter-agent",
+      "authored_at": "2026-08-31"
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "stage": "operations",
+    "checks": 10,
+    "failures": [],
+    "results": [
+      {
+        "case": "nanopore",
+        "operation": "stats",
+        "status": "pass",
+        "detail": "summary: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "read_lengths",
+        "status": "pass",
+        "detail": "lengths: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "gc_content",
+        "status": "pass",
+        "detail": "gc: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "mean_qscore",
+        "status": "pass",
+        "detail": "qscores: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "filter_length_min_1000",
+        "status": "pass",
+        "detail": "filtered: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "filter_qscore_min_10",
+        "status": "pass",
+        "detail": "filtered: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "filter_low_complexity",
+        "status": "pass",
+        "detail": "filtered: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "trim_front_10",
+        "status": "pass",
+        "detail": "trimmed: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "trim_tail_10",
+        "status": "pass",
+        "detail": "trimmed: matches golden"
+      },
+      {
+        "case": "nanopore",
+        "operation": "subsample_half",
+        "status": "pass",
+        "detail": "sampled: matches golden"
+      }
+    ],
+    "warnings": [
+      "image is not pinned by digest; goldens cannot be trusted across rebuilds"
+    ]
+  },
+  "guardrails": [
+    "the repository changed during the run (the agent must work only in staging):  M tools/agent/prompt.md"
+  ],
+  "port_types_used": [
+    {
+      "operation": "stats",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "stats",
+      "port": "summary",
+      "type": "Table"
+    },
+    {
+      "operation": "read_lengths",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "read_lengths",
+      "port": "lengths",
+      "type": "Text"
+    },
+    {
+      "operation": "gc_content",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "gc_content",
+      "port": "gc",
+      "type": "Text"
+    },
+    {
+      "operation": "mean_qscore",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "mean_qscore",
+      "port": "qscores",
+      "type": "Text"
+    },
+    {
+      "operation": "filter_length_min_1000",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "filter_length_min_1000",
+      "port": "filtered",
+      "type": "Sequence"
+    },
+    {
+      "operation": "filter_qscore_min_10",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "filter_qscore_min_10",
+      "port": "filtered",
+      "type": "Sequence"
+    },
+    {
+      "operation": "filter_low_complexity",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "filter_low_complexity",
+      "port": "filtered",
+      "type": "Sequence"
+    },
+    {
+      "operation": "trim_front_10",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "trim_front_10",
+      "port": "trimmed",
+      "type": "Sequence"
+    },
+    {
+      "operation": "trim_tail_10",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "trim_tail_10",
+      "port": "trimmed",
+      "type": "Sequence"
+    },
+    {
+      "operation": "subsample_half",
+      "port": "reads",
+      "type": "Sequence"
+    },
+    {
+      "operation": "subsample_half",
+      "port": "sampled",
+      "type": "Sequence"
+    }
+  ],
+  "license": {
+    "value": "MIT",
+    "basis": "found",
+    "note": "Read directly from LICENSE at the cloned repo root (commit 21b9657): \"MIT License / Copyright (c) 2022 Angel Angelov\". The Dockerfile copies that same file into the image at /usr/share/doc/faster/LICENSE and sets org.opencontainers.image.licenses=MIT, so the shipped artefact carries its own licence text. Note Cargo.toml declares no `license` field, so crates.io metadata is not a second source; the LICENSE file is the only statement and it is unambiguous."
+  },
+  "probes": [
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "--help"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-t",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-l",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-g",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-q",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-x",
+        "0.5",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-y",
+        "20",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-f",
+        "1000",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-w",
+        "10",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-p",
+        "0.5",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    },
+    {
+      "image": "doorway/faster:0.2.5",
+      "command": [
+        "faster",
+        "-d",
+        "2.0",
+        "/work/in/reads"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "caveats": [
+    {
+      "kind": "observed",
+      "detail": "Image is not pinned by digest \u2014 the only conformance warning",
+      "where": ""
+    },
+    {
+      "kind": "observed",
+      "detail": "Three ports typed `Text` \u2014 the tool emits headerless bare-number columns that no vocabulary type fits",
+      "where": ""
+    },
+    {
+      "kind": "observed",
+      "detail": "All thresholds are hardcoded per operation \u2014 the manifest schema has no parameter concept",
+      "where": ""
+    },
+    {
+      "kind": "observed",
+      "detail": "trim_front/trim_tail panic on any read shorter than the trim length, after emitting partial output",
+      "where": ""
+    },
+    {
+      "kind": "assumed",
+      "detail": "machine_class `nano` is inferred from code reading, not measured; `stats` holds an 8-byte-per-read vector in RAM",
+      "where": ""
+    },
+    {
+      "kind": "observed",
+      "detail": "Filtering modes round-trip FASTQ headers with an extra space, and report kept/filtered counts only on stderr",
+      "where": ""
+    },
+    {
+      "kind": "assumed",
+      "detail": "gzip input is claimed by upstream and plumbed by kseq, but not exercised by any fixture",
+      "where": ""
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "read_lengths.lengths"
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "gc_content.gc"
+    },
+    {
+      "kind": "text_fallback",
+      "detail": "typed as Text, the escape hatch. It will pass conformance and compose with nothing. Check whether a real type fits, or whether the vocabulary needs extending.",
+      "where": "mean_qscore.qscores"
+    },
+    {
+      "kind": "untested_path",
+      "detail": "image was built here but has no digest, so goldens cannot be tied to a specific image.",
+      "where": ""
+    }
+  ]
+}
