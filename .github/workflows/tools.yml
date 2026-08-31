@@ -1,0 +1,27 @@
+# Grades every adapter in tools/ on each change to them.
+#
+# This is the gate that makes an open catalogue trustworthy. It is also what an
+# adapter agent will eventually be graded by, so it runs the same conform.py a
+# developer runs locally - no CI-only checks, no local-only escapes.
+name: tool adapters
+
+on:
+  push:
+    paths: ["tools/**", ".github/workflows/tools.yml"]
+  pull_request:
+    paths: ["tools/**", ".github/workflows/tools.yml"]
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Only jsonschema, and only so the manifest schema is always enforced here
+      # even if a contributor's machine lacks it. The runner itself is stdlib.
+      - run: pip install -r tools/requirements.txt
+      - run: ./tools/build-local-images.sh
+      - run: ./tools/pull-images.sh
+      - run: python3 tools/runner/conform.py

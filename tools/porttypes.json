@@ -1,0 +1,110 @@
+{
+  "$comment": "The type catalogue - biotech MIME types. Each type is meaning, formats, a sniffer that recognises one from its bytes, and a specimen. Adding a type is a data change, not a code change; the runner reads this file and knows nothing about biology. Identifiers track EDAM (edamontology.org) so this stays interoperable rather than becoming a private dialect. The `example` is a fallback: when a user sets up a tool they normally supply their own data, and that is always the better fixture. The specimen exists so a fixture can be built when they have not.",
+  "types": {
+    "Sequence": {
+      "description": "One or more biological sequences.",
+      "edam": "data_2044",
+      "formats": {
+        "fasta": {
+          "extensions": [
+            ".fasta",
+            ".fa",
+            ".fna",
+            ".faa"
+          ],
+          "sniff": "^>",
+          "example": "examples/sequence.fasta"
+        },
+        "fastq": {
+          "extensions": [
+            ".fastq",
+            ".fq"
+          ],
+          "sniff": "^@",
+          "example": "examples/sequence.fastq"
+        }
+      }
+    },
+    "Table": {
+      "description": "Rectangular data with a header row.",
+      "edam": "data_2082",
+      "formats": {
+        "tsv": {
+          "extensions": [
+            ".tsv",
+            ".tab"
+          ],
+          "sniff": "^[^\\t\\n]+\\t",
+          "comment_prefix": "#",
+          "example": "examples/table.tsv"
+        },
+        "csv": {
+          "extensions": [
+            ".csv"
+          ],
+          "sniff": "^[^,\\n]+,",
+          "comment_prefix": "#",
+          "example": "examples/table.csv"
+        }
+      },
+      "$comment": "Sniffing skips comment_prefix lines. Found by portlab/stamp on the first conformance run: its output opens with a '#' provenance header, which is not a type error."
+    },
+    "Text": {
+      "description": "Unstructured text. The escape hatch - if an adapter uses this for everything, it has not been ported, only wrapped.",
+      "edam": "data_2526",
+      "formats": {
+        "txt": {
+          "extensions": [
+            ".txt",
+            ".log"
+          ],
+          "sniff": ".",
+          "example": "examples/text.txt"
+        }
+      }
+    },
+    "Directory": {
+      "description": "An opaque multi-file artefact produced as a unit. A BLAST database is the motivating case.",
+      "edam": "data_0006",
+      "formats": {
+        "dir": {
+          "extensions": [],
+          "sniff": null
+        }
+      }
+    },
+    "Alignment": {
+      "description": "Sequences padded to a common length. Not a Sequence: the gaps carry the homology claim, and downstream tools reject unaligned input.",
+      "edam": "data_0863",
+      "$comment": "Found while wrapping MAFFT: aligned FASTA is lexically identical to plain FASTA on its first line, so a regex sniffer cannot separate Alignment from Sequence. The distinguishing property is structural - every record the same length - which is why `structure` exists.",
+      "formats": {
+        "fasta": {
+          "extensions": [
+            ".aln.fasta",
+            ".afa",
+            ".fasta"
+          ],
+          "sniff": "^>",
+          "structure": "equal_length_records",
+          "example": "examples/alignment.fasta"
+        }
+      }
+    },
+    "Tree": {
+      "description": "A phylogeny in Newick form.",
+      "edam": "data_0872",
+      "formats": {
+        "newick": {
+          "extensions": [
+            ".nwk",
+            ".newick",
+            ".tree"
+          ],
+          "sniff": "^\\(",
+          "structure": "newick_terminated",
+          "example": "examples/tree.nwk"
+        }
+      }
+    }
+  }
+}

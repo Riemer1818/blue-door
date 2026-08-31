@@ -1,0 +1,8 @@
+{
+  "$comment": "Operations expected to fail, and how. An adapter proves itself by failing correctly as much as by succeeding - these three are the reason portlab exists.",
+  "expect": {
+    "liar": "missing_output",
+    "slow": "timeout",
+    "hungry": "oom"
+  }
+}
