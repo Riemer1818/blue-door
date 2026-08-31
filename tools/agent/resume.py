@@ -53,7 +53,11 @@ def archive(workspace, report_path: pathlib.Path, events_path: pathlib.Path | No
         return None if parts & EXCLUDE else entry
 
     with tarfile.open(target, "w:gz") as tar:
-        tar.add(workspace.adapter, arcname="adapter", filter=keep)
+        # Named for the adapter, not "adapter". conform.py validates the manifest
+        # id against its directory name, so an archive that renames the directory
+        # cannot be graded after restore - it fails statically with zero checks,
+        # which is what the promotion gate hit the first time it ran for real.
+        tar.add(workspace.adapter, arcname=workspace.adapter_id, filter=keep)
         if workspace.scratch.exists():
             tar.add(workspace.scratch, arcname="scratch", filter=keep)
         tar.add(report_path, arcname="report.json")
@@ -71,9 +75,14 @@ def restore(archive_path: pathlib.Path, into: pathlib.Path | None = None) -> dic
 
     report = json.loads((destination / "report.json").read_text())
     session = report.get("session", {})
+    # Older archives stored it as "adapter"; accept both so existing runs stay
+    # promotable rather than being stranded by the fix.
+    adapter = destination / report.get("adapter_id", "adapter")
+    if not adapter.exists():
+        adapter = destination / "adapter"
     return {
         "root": destination,
-        "adapter": destination / "adapter",
+        "adapter": adapter,
         "scratch": destination / "scratch",
         "report": report,
         # The SDK session id is what makes this a resume rather than a re-run:
