@@ -1,4 +1,4 @@
-import { readFile, readdir, rm } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import type { Kysely } from "kysely";
@@ -46,6 +46,8 @@ export type CollectedOutput = {
   portType: string | null;
   portFormat: string | null;
   detection: string;
+  /** Null when the output is not sequence-shaped and the question does not arise. */
+  alphabet: string | null;
 };
 
 function runDir(runId: string): string {
@@ -105,9 +107,37 @@ export async function stageInputs(
   return { dir, staged, missing };
 }
 
-/** Where the executor writes. Created empty; it owns everything under it. */
+/** Where the executor writes. Pure path; see `prepareOutputDir` before a run. */
 export function outputDir(runId: string): string {
   return path.join(runDir(runId), "out");
+}
+
+/**
+ * Create the output directory, and refuse to reuse a dirty one.
+ *
+ * The executor owns everything under this path, so it must start empty — but
+ * nothing made that true until now, and the failure was silent in the worst
+ * way: a reused run id would leave a previous run's outputs in place, and
+ * `collectOutputs` would take ownership of them as though this run had produced
+ * them. Wrong provenance on a real result, with no error anywhere.
+ *
+ * Throwing is right rather than clearing. A non-empty directory here means
+ * either a run id collision or a previous run that was never cleaned up, and
+ * both are bugs worth surfacing — silently deleting whatever is there would
+ * destroy the evidence needed to work out which.
+ */
+export async function prepareOutputDir(runId: string): Promise<string> {
+  const dir = outputDir(runId);
+  await mkdir(dir, { recursive: true });
+
+  const existing = await readdir(dir);
+  if (existing.length > 0) {
+    throw new Error(
+      `output directory for run ${runId} is not empty (${existing.join(", ")}) — ` +
+        `a reused run id, or a previous run that was never discarded`,
+    );
+  }
+  return dir;
 }
 
 /**
@@ -175,6 +205,12 @@ export async function collectOutputs(
         portType: detection.type,
         portFormat: detection.type ? detection.format : null,
         detection: detection.detail,
+        // Outputs are typed exactly as uploads are, alphabet included. Without
+        // this a tool's result could never feed a port that constrains alphabet
+        // - which is the whole pipeline case: MAFFT's alignment has to satisfy
+        // FastTree's nucleotide-only input, and it cannot do that unlabelled.
+        alphabet: detection.alphabet?.alphabet ?? null,
+        alphabetConfidence: detection.alphabet?.confidence ?? null,
       })
       .execute();
 
@@ -186,6 +222,7 @@ export async function collectOutputs(
       portType: detection.type,
       portFormat: detection.format,
       detection: detection.detail,
+      alphabet: detection.alphabet?.alphabet ?? null,
     });
   }
 
