@@ -1,0 +1,110 @@
+{
+  "schema_version": "0.2",
+  "run_id": "20260831T142211-mafft",
+  "adapter_id": "mafft",
+  "requested": {
+    "name": "mafft",
+    "url": null
+  },
+  "outcome": "conformant",
+  "seconds": 196.4,
+  "image": {
+    "reference": "quay.io/biocontainers/mafft:7.525--h031d066_1",
+    "digest": "sha256:6f1a1c2b9d4e8a3f5c7b0e2d9a4f6c8b1e3d5a7f9c2b4d6e8a0f2c4b6d8e0a2f",
+    "origin": "registry",
+    "basis": "found",
+    "candidates": [
+      "quay.io/biocontainers/mafft:7.525--h031d066_1"
+    ]
+  },
+  "source": {
+    "repository": "https://gitlab.com/sysimm/mafft",
+    "ref": "v7.525",
+    "commit": "3e1a90b7c4d2f8e6a1b5c9d3e7f2a4b6c8d0e2f4"
+  },
+  "version": {
+    "value": "7.525",
+    "basis": "found",
+    "note": "reported by `mafft --version`"
+  },
+  "session": {
+    "sdk_session_id": "sess_01HQZK3M8N4P6R9T2V5X7Y0A",
+    "resumable": true,
+    "resume_hint": ""
+  },
+  "promotable": [
+    "manifest.json",
+    "README.md",
+    "fixtures/three-sequences/case.json",
+    "fixtures/three-sequences/inputs/sequences.fasta",
+    "fixtures/three-sequences/expected/alignment/alignment.fasta"
+  ],
+  "rejected_files": [],
+  "manifest": {
+    "id": "mafft",
+    "version": "7.525",
+    "image": "quay.io/biocontainers/mafft:7.525--h031d066_1",
+    "machine_class": "standard",
+    "operations": {
+      "align": {
+        "command": [
+          "mafft",
+          "--auto",
+          "--quiet",
+          "{{inputs.sequences}}"
+        ],
+        "stdout": "alignment",
+        "inputs": {
+          "sequences": {
+            "type": "Sequence",
+            "format": "fasta"
+          }
+        },
+        "outputs": {
+          "alignment": {
+            "type": "Alignment",
+            "format": "fasta"
+          }
+        }
+      }
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "checks": 6,
+    "failures": []
+  },
+  "guardrails": [],
+  "port_types_used": [
+    {
+      "operation": "align",
+      "port": "sequences",
+      "type": "Sequence"
+    },
+    {
+      "operation": "align",
+      "port": "alignment",
+      "type": "Alignment"
+    }
+  ],
+  "license": {
+    "value": "BSD-3-Clause",
+    "basis": "found",
+    "note": "LICENSE at the repository root"
+  },
+  "probes": [
+    {
+      "image": "quay.io/biocontainers/mafft:7.525--h031d066_1",
+      "command": "mafft --version",
+      "exit_code": 0,
+      "ms": 412
+    },
+    {
+      "image": "quay.io/biocontainers/mafft:7.525--h031d066_1",
+      "command": "mafft --auto /work/in/probe.fasta",
+      "exit_code": 0,
+      "ms": 1183
+    }
+  ],
+  "caveats": []
+}
