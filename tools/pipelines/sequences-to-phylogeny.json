@@ -1,6 +1,6 @@
 {
   "id": "sequences-to-phylogeny",
-  "description": "NUCLEOTIDE ONLY. Unaligned DNA sequences to a tree. Three tools, three port types, two wires. fasttree.infer hardcodes -nt, and the type system cannot yet express that constraint - feeding this protein sequences produces a plausible tree under the wrong model with every check passing. See BLU-22.",
+  "description": "Unaligned nucleotide sequences to a tree. Three tools, three port types, two wires. fasttree.infer declares requires.alphabet = nucleotide, so protein input is refused pre-flight rather than producing a plausible tree under the wrong model. See BLU-22.",
   "inputs": {
     "sequences": {
       "type": "Sequence",
@@ -26,5 +26,15 @@
   "outputs": {
     "alignment": "align.alignment",
     "tree": "infer.tree"
+  },
+  "$regression": {
+    "$comment": "BLU-22. These must keep behaving this way; the protein case is the one that silently produced a wrong tree, and the ambiguous case is the door it would come back through.",
+    "must_be_refused": {
+      "tools/corpus/alphabet/01-protein-recA.fasta": "protein into a nucleotide-only model",
+      "tools/corpus/alphabet/04-ambiguous-short-acgt.fasta": "alphabet undetermined; uncertainty must block rather than be resolved optimistically"
+    },
+    "must_be_accepted": {
+      "tools/examples/sequence.fasta": "nucleotide, the ordinary case"
+    }
   }
 }

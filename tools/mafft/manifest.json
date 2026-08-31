@@ -25,7 +25,8 @@
       "outputs": {
         "alignment": {
           "type": "Alignment",
-          "format": "fasta"
+          "format": "fasta",
+          "alphabet_from": "sequences"
         }
       },
       "timeout_seconds": 300
