@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...and we do opt in for the example. It carries no secrets, only the variable
+# names and the reasoning behind them, and an example nobody can clone is not
+# one. The real .env.local stays ignored by the line above.
+!.env*.example
 
 # vercel
 .vercel
