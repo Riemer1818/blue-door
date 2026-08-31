@@ -232,10 +232,15 @@ def run_operation(adapter_dir, op_name, inputs, workdir=None, keep=False):
 
     if timed_out:
         report["outcome"] = "timeout"
-    elif exit_code == 125 or b"Unable to find image" in stderr:
-        # Docker's own failure to start the container. Exit 125 is the daemon
-        # saying "the run never happened", which is a different thing entirely
-        # from the tool having failed.
+    elif exit_code == 125:
+        # Docker exits 125 when the run never happened - unknown image, bad flag,
+        # daemon refusal. Distinct from the tool failing, so the platform can say
+        # "the registry is down" rather than "this adapter is broken".
+        #
+        # Deliberately NOT matched on stderr text: docker prints "Unable to find
+        # image 'x' locally" as an informational line before auto-pulling
+        # successfully. Matching it classified a healthy first-run-after-pull as a
+        # failure - invisible on a warm machine, caught immediately by cold CI.
         report["outcome"] = "image_missing"
     elif exit_code == 137:
         # SIGKILL under a memory cap. Distinguishing this from a generic failure

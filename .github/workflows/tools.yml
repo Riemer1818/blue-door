@@ -23,4 +23,5 @@ jobs:
       # even if a contributor's machine lacks it. The runner itself is stdlib.
       - run: pip install -r tools/requirements.txt
       - run: ./tools/build-local-images.sh
+      - run: ./tools/pull-images.sh
       - run: python3 tools/runner/conform.py
