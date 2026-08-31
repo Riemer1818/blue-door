@@ -2,3 +2,4 @@
 doorway-*/
 __pycache__/
 agent/.venv/
+.runs/
