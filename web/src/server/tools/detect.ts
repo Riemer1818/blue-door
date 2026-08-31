@@ -36,6 +36,16 @@ export type Detection = {
   format: string | null;
   /** Why detection concluded this. Shown to a user asking why a file is unusable. */
   detail: string;
+  /** Present only for sequence-shaped files. See `detectAlphabet`. */
+  alphabet?: AlphabetVerdict;
+};
+
+export type Alphabet = "dna" | "rna" | "protein" | "ambiguous" | "not_sequence";
+
+export type AlphabetVerdict = {
+  alphabet: Alphabet;
+  confidence: "certain" | "high" | "low" | "none";
+  why: string;
 };
 
 type Format = {
@@ -143,6 +153,183 @@ function firstMeaningfulLine(text: string, commentPrefix?: string): string | nul
   return null;
 }
 
+/* ------------------------------------------------------------------------- *
+ * Alphabet
+ * ------------------------------------------------------------------------- */
+
+type AlphabetRules = {
+  strip: string;
+  rules: {
+    protein_only_residues: { letters: string };
+    nucleotide_residues: { letters: string };
+    thresholds: {
+      min_residues_for_confidence: number;
+      nucleotide_fraction_for_dna: number;
+      nucleotide_fraction_for_protein: number;
+    };
+  };
+};
+
+let alphabetRules: AlphabetRules | null = null;
+
+async function rules(): Promise<AlphabetRules | null> {
+  if (alphabetRules) return alphabetRules;
+  try {
+    const parsed = JSON.parse(await readFile(path.join(TOOLS_DIR, "porttypes.json"), "utf8")) as {
+      alphabets?: AlphabetRules;
+    };
+    alphabetRules = parsed.alphabets ?? null;
+  } catch {
+    alphabetRules = null;
+  }
+  return alphabetRules;
+}
+
+/**
+ * Sequence characters only, plus which container they came from.
+ *
+ * Both halves were real bugs, one on each side of this boundary. FASTQ quality
+ * lines are arbitrary printable ASCII and are full of E, F, I, L, P and Q, so
+ * treating every non-header line as sequence reads a nanopore run as protein
+ * with certainty. And a Newick tree is not a sequence at all, but a parser that
+ * only skips `>` headers eats the taxon names and answers confidently about a
+ * file it should have refused.
+ *
+ * So the container is identified first and anything unrecognised is refused.
+ * This is the detection-versus-validation problem again: a validator is told
+ * what it is looking at, a detector is not, and code written for the first is
+ * dangerous in the second.
+ */
+function residues(text: string, strip: Set<string>): [string, string] {
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return ["", "empty"];
+
+  const clean = (chunk: string) =>
+    [...chunk]
+      .filter((c) => !strip.has(c))
+      .join("")
+      .toUpperCase();
+
+  if (lines[0].startsWith(">")) {
+    return [clean(lines.filter((line) => !line.startsWith(">")).join("")), "fasta"];
+  }
+
+  if (lines[0].startsWith("@")) {
+    // Four lines per record: header, sequence, '+', quality. Only the second is
+    // sequence; taking the rest is what reads quality scores as residues.
+    const seq: string[] = [];
+    for (let i = 0; i < lines.length - 1; i += 4) {
+      if (lines[i].startsWith("@")) seq.push(lines[i + 1]);
+    }
+    return [clean(seq.join("")), "fastq"];
+  }
+
+  return ["", "unrecognised"];
+}
+
+/**
+ * Which alphabet is this written in?
+ *
+ * The rule lives in `tools/porttypes.json`; this is one implementation of it and
+ * `tools/runner/alphabet.py` is another. Two implementations are fine — crossing
+ * a language boundary on every upload would not be — but two *rules* would
+ * drift, so the thresholds and letter sets are data both sides read, and the
+ * shared corpus at `tools/corpus/alphabet` is what proves they still agree.
+ *
+ * The asymmetry to understand first: nucleotide letters are a SUBSET of protein
+ * letters, so every DNA sequence is also a syntactically valid protein sequence.
+ * Detection can rule protein IN with certainty — one E, F, I, L, P or Q settles
+ * it — but can only ever rule DNA in with enough evidence. That is why
+ * `ambiguous` is a real answer rather than a failure to try harder, and why a
+ * short sequence of only ACGT cannot be resolved by any threshold.
+ *
+ * Never resolve `ambiguous` by guessing. A file whose alphabet is ambiguous must
+ * not be offered as a match for a port that constrains alphabet — guessing here
+ * is how a protein alignment reaches a nucleotide-only tree builder and produces
+ * a confident wrong answer.
+ */
+export async function detectAlphabet(text: string): Promise<AlphabetVerdict> {
+  const spec = await rules();
+  if (!spec) {
+    return { alphabet: "ambiguous", confidence: "none", why: "no alphabet rule is available" };
+  }
+
+  const [seq, container] = residues(text, new Set(spec.strip));
+  if (container === "unrecognised" || container === "empty") {
+    return {
+      alphabet: "not_sequence",
+      confidence: "certain",
+      why: `not a recognised sequence container (${container})`,
+    };
+  }
+  if (seq.length === 0) {
+    return {
+      alphabet: "not_sequence",
+      confidence: "certain",
+      why: `${container} with no sequence residues`,
+    };
+  }
+
+  const proteinOnly = new Set(spec.rules.protein_only_residues.letters);
+  const nucleotide = new Set(spec.rules.nucleotide_residues.letters);
+  const limits = spec.rules.thresholds;
+
+  const counts = new Map<string, number>();
+  for (const c of seq) counts.set(c, (counts.get(c) ?? 0) + 1);
+
+  // Positive proof beats any count: these letters cannot appear in a nucleotide
+  // alphabet at all, so one of them settles the question outright.
+  const found = [...counts.keys()].filter((c) => proteinOnly.has(c)).sort();
+  if (found.length > 0) {
+    return {
+      alphabet: "protein",
+      confidence: "certain",
+      why: `contains ${found.join(", ")}, which no nucleotide alphabet has`,
+    };
+  }
+
+  const total = seq.length;
+  let nucleotideCount = 0;
+  for (const [letter, n] of counts) if (nucleotide.has(letter)) nucleotideCount += n;
+  const fraction = nucleotideCount / total;
+  const percent = `${(fraction * 100).toFixed(1)}%`;
+
+  if (total < limits.min_residues_for_confidence) {
+    return {
+      alphabet: "ambiguous",
+      confidence: "none",
+      why: `only ${total} residues; too little evidence either way`,
+    };
+  }
+
+  if (fraction >= limits.nucleotide_fraction_for_dna) {
+    const u = counts.get("U") ?? 0;
+    const t = counts.get("T") ?? 0;
+    const kind = u > t ? "rna" : "dna";
+    return {
+      alphabet: kind,
+      confidence: "high",
+      why:
+        `${percent} of ${total} residues are nucleotide letters` +
+        (kind === "rna" ? ", U outnumbers T" : ""),
+    };
+  }
+
+  if (fraction <= limits.nucleotide_fraction_for_protein) {
+    return {
+      alphabet: "protein",
+      confidence: "high",
+      why: `only ${percent} of ${total} residues are nucleotide letters`,
+    };
+  }
+
+  return {
+    alphabet: "ambiguous",
+    confidence: "low",
+    why: `${percent} nucleotide letters sits between the thresholds`,
+  };
+}
+
 /**
  * Content decides; the filename only breaks ties.
  *
@@ -150,7 +337,7 @@ function firstMeaningfulLine(text: string, commentPrefix?: string): string | nul
  * exactly the case worth catching — it is how a failed download becomes a
  * confidently wrong pipeline result.
  */
-export async function detect(filename: string, bytes: Buffer): Promise<Detection> {
+async function detectType(filename: string, bytes: Buffer): Promise<Detection> {
   const text = bytes.toString("utf8");
   if (text.trim().length === 0) return { type: null, format: null, detail: "the file is empty" };
 
@@ -215,4 +402,18 @@ export async function detect(filename: string, bytes: Buffer): Promise<Detection
       structuralMiss ??
       "nothing in the port-type vocabulary matched. It can be kept, but not used as a typed input.",
   };
+}
+
+/**
+ * Type first, then alphabet for the types that carry residues.
+ *
+ * Alphabet is only meaningful for sequence-shaped data, so a table or a tree
+ * does not get one - an absent alphabet means "not applicable", which is a
+ * different statement from `not_sequence`, and both differ from a guess.
+ */
+export async function detect(filename: string, bytes: Buffer): Promise<Detection> {
+  const detection = await detectType(filename, bytes);
+  if (detection.type !== "Sequence" && detection.type !== "Alignment") return detection;
+
+  return { ...detection, alphabet: await detectAlphabet(bytes.toString("utf8")) };
 }

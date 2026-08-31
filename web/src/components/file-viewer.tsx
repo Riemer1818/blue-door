@@ -24,7 +24,8 @@ export function FileViewer({ nodeId }: { nodeId: string }) {
   if (query.error) return <p className="p-8 text-sm text-red-600">{query.error.message}</p>;
 
   const file = query.data!;
-  const detection = meta.data?.find((f) => f.id === nodeId)?.detection;
+  const row = meta.data?.find((f) => f.id === nodeId);
+  const detection = row?.detection;
   const typed = file.portType !== null;
 
   return (
@@ -65,6 +66,37 @@ export function FileViewer({ nodeId }: { nodeId: string }) {
         {detection && (
           <p className="mt-1 pl-6 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
             {detection}
+          </p>
+        )}
+
+        {/* Alphabet, for sequence-shaped files only. `ambiguous` is a real
+            answer rather than a failure to try harder — nucleotide letters are
+            a subset of protein letters, so a short run of ACGT genuinely cannot
+            be resolved — and it is shown as such, because a port that needs an
+            alphabet will refuse it. */}
+        {row?.alphabet && (
+          <p className="mt-2 flex items-start gap-2 text-sm">
+            {row.alphabet === "ambiguous" || row.alphabet === "not_sequence" ? (
+              <CircleAlert size={15} className="mt-0.5 shrink-0 text-amber-500" />
+            ) : (
+              <FileCheck2 size={15} className="mt-0.5 shrink-0 text-emerald-600" />
+            )}
+            <span>
+              <span
+                className={
+                  row.alphabet === "ambiguous" || row.alphabet === "not_sequence"
+                    ? "font-mono text-amber-700 dark:text-amber-500"
+                    : "font-mono text-emerald-700 dark:text-emerald-400"
+                }
+              >
+                {row.alphabet}
+              </span>
+              <span className="text-slate-500 dark:text-slate-400">
+                {row.alphabet === "ambiguous"
+                  ? " — cannot be used where a tool needs a specific alphabet."
+                  : ` — ${row.alphabetConfidence} confidence.`}
+              </span>
+            </span>
           </p>
         )}
       </header>

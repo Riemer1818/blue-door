@@ -40,6 +40,8 @@ export const filesRouter = router({
         "portType",
         "portFormat",
         "detection",
+        "alphabet",
+        "alphabetConfidence",
         "createdAt",
       ])
       .orderBy("name")
@@ -47,22 +49,74 @@ export const filesRouter = router({
   }),
 
   /**
-   * Files that can be wired to a port of this type.
+   * Files that can be wired to a port.
    *
-   * The filter is the product feature: a user picking an input should be
-   * offered what will actually work, and told plainly why the rest will not,
-   * rather than discovering a type mismatch after a run has been queued.
+   * A dropdown is a stronger claim than a passing type check. A script's silence
+   * is the absence of an objection; a list containing exactly one plausible
+   * option reads as a recommendation. So this returns matches AND near-misses
+   * with the reason, rather than a filtered list that looks complete.
+   *
+   * BLU-22 is why. A RecA protein alignment and a DNA alignment are both
+   * `Alignment/fasta`, so filtering on type alone offered a protein alignment
+   * for FastTree's nucleotide-only input — and the run succeeded, producing a
+   * real tree under the wrong evolutionary model with nothing failing anywhere.
+   *
+   * `ambiguous` is never a match. Nucleotide letters are a subset of protein
+   * letters, so a short sequence of only ACGT genuinely cannot be resolved;
+   * treating "we cannot tell" as "it is fine" would reproduce that bug through
+   * a different door. Such a file stays visible with its ambiguity stated, so a
+   * person can choose it deliberately — but nothing chooses it for them.
    */
   forPort: protectedProcedure
-    .input(z.object({ type: z.string().min(1), format: z.string().optional() }))
+    .input(
+      z.object({
+        type: z.string().min(1),
+        format: z.string().optional(),
+        /** Omitted means the port does not care, and every alphabet matches. */
+        alphabet: z.enum(["dna", "rna", "protein", "nucleotide"]).optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       let query = ctx.tx
         .selectFrom("treeFiles")
-        .select(["id", "name", "byteSize", "portType", "portFormat"])
+        .select([
+          "id",
+          "name",
+          "byteSize",
+          "portType",
+          "portFormat",
+          "alphabet",
+          "alphabetConfidence",
+        ])
         .where("portType", "=", input.type);
 
       if (input.format) query = query.where("portFormat", "=", input.format);
-      return query.orderBy("name").execute();
+      const candidates = await query.orderBy("name").execute();
+
+      const satisfies = (alphabet: string | null): boolean => {
+        if (!input.alphabet) return true;
+        if (alphabet === null || alphabet === "ambiguous" || alphabet === "not_sequence") {
+          return false;
+        }
+        // `nucleotide` is the constraint FastTree actually needs: DNA or RNA,
+        // not one specific one.
+        if (input.alphabet === "nucleotide") return alphabet === "dna" || alphabet === "rna";
+        return alphabet === input.alphabet;
+      };
+
+      return candidates.map((file) => ({
+        ...file,
+        matches: satisfies(file.alphabet),
+        // Absent on a match; on a near-miss it is the whole explanation, and
+        // showing the file with a reason beats hiding it with none.
+        blockedBecause: satisfies(file.alphabet)
+          ? null
+          : file.alphabet === "ambiguous"
+            ? `alphabet could not be determined, and this port needs ${input.alphabet}`
+            : file.alphabet === null
+              ? "alphabet was never established for this file"
+              : `it is ${file.alphabet}, and this port needs ${input.alphabet}`,
+      }));
     }),
 
   /**
@@ -131,6 +185,10 @@ export const filesRouter = router({
             portType: detection.type,
             portFormat: detection.type ? detection.format : null,
             detection: detection.detail,
+            // Null when the file is not sequence-shaped: the question does not
+            // arise, which is a different statement from `not_sequence`.
+            alphabet: detection.alphabet?.alphabet ?? null,
+            alphabetConfidence: detection.alphabet?.confidence ?? null,
           })
           .execute();
 
@@ -140,6 +198,7 @@ export const filesRouter = router({
           portType: detection.type,
           portFormat: detection.format,
           detection: detection.detail,
+          alphabet: detection.alphabet ?? null,
         };
       } catch (error) {
         throw asClientError(error);

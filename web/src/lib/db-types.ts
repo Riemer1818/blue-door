@@ -60,6 +60,19 @@ export interface DashboardWidgets {
 }
 
 export interface Files {
+  /**
+   * NULL means not applicable - the file is not sequence-shaped, so the question
+   *    does not arise. That is a different statement from the value 'not_sequence',
+   *    which means the question was asked of something that turned out not to be a
+   *    sequence, and both differ from 'ambiguous', which means asked and unresolved.
+   */
+  alphabet: string | null;
+  /**
+   * From the shared rule in tools/porttypes.json, implemented twice - by
+   *    tools/runner/alphabet.py and web/src/server/tools/detect.ts - and held to one
+   *    behaviour by the corpus at tools/corpus/alphabet.
+   */
+  alphabetConfidence: string | null;
   blobKey: string;
   byteSize: Int8;
   contentHash: string;
@@ -107,6 +120,8 @@ export interface Surfaces {
 }
 
 export interface TreeFiles {
+  alphabet: string | null;
+  alphabetConfidence: string | null;
   blobKey: string | null;
   byteSize: Int8 | null;
   contentHash: string | null;
