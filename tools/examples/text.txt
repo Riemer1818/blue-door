@@ -1,0 +1,1 @@
+A specimen of the Text type: unstructured, no schema, no guarantees.

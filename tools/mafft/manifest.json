@@ -1,0 +1,43 @@
+{
+  "id": "mafft",
+  "version": "7.525",
+  "description": "Multiple sequence alignment. Introduces the Alignment type: its output is FASTA that is not a Sequence.",
+  "homepage": "https://mafft.cbrc.jp/alignment/software/",
+  "license": "BSD-3-Clause",
+  "image": "quay.io/biocontainers/mafft@sha256:b8ccc402a9156868fefda5caa8693f847b47dcc69aae848557f7115850e60790",
+  "machine_class": "standard",
+  "operations": {
+    "align": {
+      "description": "Automatic strategy selection. --quiet is load-bearing: without it MAFFT writes several hundred lines of progress to stderr.",
+      "command": [
+        "mafft",
+        "--auto",
+        "--quiet",
+        "{{inputs.sequences}}"
+      ],
+      "stdout": "alignment",
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "alignment": {
+          "type": "Alignment",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 300
+    }
+  },
+  "source": {
+    "repository": "https://gitlab.com/sysimm/mafft",
+    "ref": "v7.525",
+    "image_origin": "registry"
+  },
+  "provenance": {
+    "authored_by": "human",
+    "authored_at": "2026-08-31"
+  }
+}

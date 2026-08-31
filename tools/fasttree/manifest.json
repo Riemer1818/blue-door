@@ -1,0 +1,42 @@
+{
+  "id": "fasttree",
+  "version": "2.2.0",
+  "description": "Approximately-maximum-likelihood phylogenies. Consumes an Alignment and produces a Tree - the third port type, and the far end of the first real pipeline.",
+  "homepage": "http://www.microbesonline.org/fasttree/",
+  "license": "GPL-2.0",
+  "image": "quay.io/biocontainers/fasttree@sha256:42254db98f25a1d289aaa0e14a5c87f9fd5830f469acf2b6a7e24eb240a5a874",
+  "machine_class": "standard",
+  "operations": {
+    "infer": {
+      "description": "-nt selects nucleotide mode; without it FastTree silently assumes protein and returns a wrong tree rather than an error.",
+      "command": [
+        "FastTree",
+        "-nt",
+        "{{inputs.alignment}}"
+      ],
+      "stdout": "tree",
+      "inputs": {
+        "alignment": {
+          "type": "Alignment",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "tree": {
+          "type": "Tree",
+          "format": "newick"
+        }
+      },
+      "timeout_seconds": 300
+    }
+  },
+  "source": {
+    "repository": "http://www.microbesonline.org/fasttree/",
+    "ref": "2.2.0",
+    "image_origin": "registry"
+  },
+  "provenance": {
+    "authored_by": "human",
+    "authored_at": "2026-08-31"
+  }
+}

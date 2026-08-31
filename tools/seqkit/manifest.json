@@ -105,5 +105,14 @@
       },
       "timeout_seconds": 60
     }
+  },
+  "source": {
+    "repository": "https://github.com/shenwei356/seqkit",
+    "ref": "v2.8.2",
+    "image_origin": "registry"
+  },
+  "provenance": {
+    "authored_by": "human",
+    "authored_at": "2026-08-31"
   }
 }

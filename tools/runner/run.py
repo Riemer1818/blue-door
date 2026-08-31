@@ -53,6 +53,43 @@ def extension_for(port):
     return exts[0] if exts else ""
 
 
+def _equal_length_records(text):
+    """Every FASTA record the same length - what makes an alignment an alignment."""
+    lengths, current = [], None
+    for line in text.splitlines():
+        if line.startswith(">"):
+            if current is not None:
+                lengths.append(current)
+            current = 0
+        elif current is not None:
+            current += len(line.strip())
+    if current is not None:
+        lengths.append(current)
+    if len(lengths) < 2:
+        return False, "fewer than two records; nothing to be aligned against"
+    if len(set(lengths)) != 1:
+        return False, f"records differ in length {sorted(set(lengths))} - unaligned"
+    return True, f"{len(lengths)} records of {lengths[0]} columns"
+
+
+def _newick_terminated(text):
+    stripped = text.strip()
+    if not stripped.endswith(";"):
+        return False, "Newick must terminate with ';' - output may be truncated"
+    if stripped.count("(") != stripped.count(")"):
+        return False, "unbalanced parentheses"
+    return True, f"{stripped.count(',') + 1} leaves"
+
+
+# A closed, named set. Formats sometimes need a structural claim that no regex can
+# make, but allowing arbitrary code per type would put tool knowledge back into the
+# runner. Naming a check keeps the catalogue declarative.
+STRUCTURE_CHECKS = {
+    "equal_length_records": _equal_length_records,
+    "newick_terminated": _newick_terminated,
+}
+
+
 def sniff(path, port):
     """Does this file look like the declared type? Returns (ok, detail).
 
@@ -71,7 +108,12 @@ def sniff(path, port):
                     continue
                 if comment and line.startswith(comment):
                     continue  # provenance headers are not type evidence
-                return (bool(re.search(pattern, line)), line[:60].rstrip())
+                if not re.search(pattern, line):
+                    return False, line[:60].rstrip()
+                check = spec["formats"][format_of(port)].get("structure")
+                if check:
+                    return STRUCTURE_CHECKS[check](open(path, errors="replace").read())
+                return True, line[:60].rstrip()
     except OSError as exc:
         return False, str(exc)
     return False, "file is empty"

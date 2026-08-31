@@ -29,6 +29,10 @@ python3 tools/runner/conform.py --update-goldens   record expectations
 python3 tools/runner/run.py tools/seqkit stats --input sequences=path.fasta
 
 python3 tools/runner/probe.py --adapter tools/seqkit -- seqkit --help
+
+python3 tools/runner/pipe.py tools/pipelines/sequences-to-phylogeny.json --check
+python3 tools/runner/pipe.py tools/pipelines/sequences-to-phylogeny.json \
+  --input sequences=tools/examples/sequence.fasta
 ```
 
 `pip install -r tools/requirements.txt` adds `jsonschema`, which turns manifest
@@ -67,6 +71,10 @@ in unknown ways, which is what you want for validation and exactly what you do n
 inner loop. portlab breaks in known ways, in milliseconds, offline. It is the graded exam for
 the future adapter agent.
 
+**[mafft/](mafft/)** and **[fasttree/](fasttree/)** are the second and third, and they exist
+to compose: `Sequence -> Alignment -> Tree`. Wrapping MAFFT is what found the sniffer's limit
+(below).
+
 **[seqkit/](seqkit/)** is the first real tool, pulled straight from BioContainers and pinned by
 digest. It passes with zero seqkit-specific code in the runner, which is the whole point: the
 thousands of tools already containerised by Bioconda/BioContainers and already described by
@@ -88,7 +96,15 @@ Outcomes are typed, and the taxonomy carries more weight than it looks:
 and the exit code alone cannot tell you that. `oom` is separate from `nonzero_exit` so the
 platform can say "wrong machine class" rather than "broken".
 
-## Two things learned by building it
+## Three things learned by building it
+
+**A first-line regex cannot type a file.** MAFFT emits aligned FASTA, whose first line is
+`>alpha partial cds` - byte-identical to unaligned FASTA. `Alignment` and `Sequence` are not
+lexically distinguishable, but they are *structurally* distinguishable: an alignment has every
+record at equal length. Hence `structure` on a format, naming one of a closed set of checks in
+the runner. Without it the catalogue could not have held both types, and the pipeline could not
+have refused to feed unaligned data to a tree builder.
+
 
 **Sniffing had to skip comment headers.** `portlab stamp` writes a `#` provenance header before
 its TSV rows, and the Table sniffer rejected it. Comment headers are near-universal in this
@@ -100,6 +116,40 @@ full command line in their output, so a golden suite rots overnight without it. 
 declared per operation in the manifest rather than hardcoded in the runner, because which lines
 are noise is knowledge about that tool. The determinism check - run twice, compare - is what
 forces the question to be answered.
+
+## Three artefacts, not one
+
+A common instinct is to put everything about a tool in one file. These are separate
+because they have different owners, different lifetimes and different review needs:
+
+| Artefact | Holds | Changes when |
+|---|---|---|
+| `<tool>/manifest.json` | image, source, typed ports, machine class, license | someone wraps or upgrades a tool |
+| `pipelines/*.json` | which tools, wired how | someone composes an analysis |
+| catalogue record *(not built yet)* | last run, cost, failure rate, measured drift | every single run |
+
+The third is the reason for the split. If run history lived in the manifest, every
+execution would dirty the git tree, and manifest diffs - the thing a human reviews
+before accepting an agent's work - would drown in noise. A manifest is a **declaration**
+that git tracks and a person approves. A catalogue record is **accumulated fact** and
+belongs in Postgres.
+
+Composition is separate for the same reason: a manifest describes one tool and is owned
+by whoever wrapped it; a pipeline references tools and is owned by whoever is doing the
+science. Folding one into the other would make every tool know about every other one.
+
+## Piping
+
+[runner/pipe.py](runner/pipe.py) wires adapters together through their typed ports, and
+**type-checks every connection before executing anything**. An incompatible pipeline is
+rejected in milliseconds having spent nothing:
+
+    INVALID infer.alignment: type mismatch - wants Alignment/fasta,
+            'clean.reversed' yields Sequence/fasta
+
+That is also exactly what makes a drag-and-drop canvas possible. The editor refuses a
+connection using the same check, against the same vocabulary in `porttypes.json` - the
+UI does not need its own idea of what may connect to what.
 
 ## Deliberately not here
 

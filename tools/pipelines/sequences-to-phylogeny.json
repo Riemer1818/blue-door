@@ -1,0 +1,23 @@
+{
+  "id": "sequences-to-phylogeny",
+  "description": "Unaligned sequences to a tree. Three tools, three port types, two wires.",
+  "inputs": {
+    "sequences": { "type": "Sequence", "format": "fasta" }
+  },
+  "steps": [
+    {
+      "id": "align",
+      "uses": "mafft.align",
+      "wire": { "sequences": "@input.sequences" }
+    },
+    {
+      "id": "infer",
+      "uses": "fasttree.infer",
+      "wire": { "alignment": "align.alignment" }
+    }
+  ],
+  "outputs": {
+    "alignment": "align.alignment",
+    "tree": "infer.tree"
+  }
+}
