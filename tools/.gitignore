@@ -1,0 +1,3 @@
+# Runner scratch space. Only ever produced by --keep or a failed run.
+doorway-*/
+__pycache__/

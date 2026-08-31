@@ -1,0 +1,72 @@
+{
+  "$comment": "The port-type vocabulary. Adding a type is a data change, not a code change - the runner reads this file and knows nothing about biology. Each type is a triple: what it means, which file formats carry it, and how to recognise one from its bytes. The sniffer is the piece that lets an adapter's declared outputs be checked against reality, and later lets an agent infer ports for a tool it has never seen. Identifiers should track EDAM (edamontology.org) rather than becoming a private dialect.",
+  "types": {
+    "Sequence": {
+      "description": "One or more biological sequences.",
+      "edam": "data_2044",
+      "formats": {
+        "fasta": {
+          "extensions": [
+            ".fasta",
+            ".fa",
+            ".fna",
+            ".faa"
+          ],
+          "sniff": "^>"
+        },
+        "fastq": {
+          "extensions": [
+            ".fastq",
+            ".fq"
+          ],
+          "sniff": "^@"
+        }
+      }
+    },
+    "Table": {
+      "description": "Rectangular data with a header row.",
+      "edam": "data_2082",
+      "formats": {
+        "tsv": {
+          "extensions": [
+            ".tsv",
+            ".tab"
+          ],
+          "sniff": "^[^\\t\\n]+\\t",
+          "comment_prefix": "#"
+        },
+        "csv": {
+          "extensions": [
+            ".csv"
+          ],
+          "sniff": "^[^,\\n]+,",
+          "comment_prefix": "#"
+        }
+      },
+      "$comment": "Sniffing skips comment_prefix lines. Found by portlab/stamp on the first conformance run: its output opens with a '#' provenance header, which is not a type error."
+    },
+    "Text": {
+      "description": "Unstructured text. The escape hatch - if an adapter uses this for everything, it has not been ported, only wrapped.",
+      "edam": "data_2526",
+      "formats": {
+        "txt": {
+          "extensions": [
+            ".txt",
+            ".log"
+          ],
+          "sniff": "."
+        }
+      }
+    },
+    "Directory": {
+      "description": "An opaque multi-file artefact produced as a unit. A BLAST database is the motivating case.",
+      "edam": "data_0006",
+      "formats": {
+        "dir": {
+          "extensions": [],
+          "sniff": null
+        }
+      }
+    }
+  }
+}

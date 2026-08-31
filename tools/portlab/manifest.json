@@ -1,0 +1,219 @@
+{
+  "id": "portlab",
+  "version": "0.1.0",
+  "description": "A fake tool that misbehaves on purpose. Not science - this is the graded exam for the adapter agent, and the regression suite for the runner.",
+  "license": "internal",
+  "image": "bluedoor/portlab:0.1.0",
+  "machine_class": "nano",
+  "operations": {
+    "revcomp": {
+      "description": "Reverse-complement every record. The happy path.",
+      "command": [
+        "portlab",
+        "revcomp",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.reversed}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "reversed": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "stats": {
+      "description": "Per-record length and GC. Crosses a type boundary: Sequence in, Table out.",
+      "command": [
+        "portlab",
+        "stats",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.summary}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "summary": {
+          "type": "Table",
+          "format": "tsv"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "noisy": {
+      "description": "Progress on stdout, results in a file. An adapter that captures stdout gets a progress log instead of data.",
+      "command": [
+        "portlab",
+        "noisy",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.upper}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "upper": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "pipe": {
+      "description": "No file arguments exist. Streams both ways.",
+      "command": [
+        "portlab",
+        "pipe"
+      ],
+      "stdin": "sequences",
+      "stdout": "lowered",
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "lowered": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "spray": {
+      "description": "Emits a directory whose contents are unknown until it has run. The BLAST-database shape in miniature.",
+      "command": [
+        "portlab",
+        "spray",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.split}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "split": {
+          "type": "Directory",
+          "format": "dir"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "stamp": {
+      "description": "Embeds a timestamp and the command line. Two runs differ byte-for-byte until normalisation strips the noise.",
+      "command": [
+        "portlab",
+        "stamp",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.report}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "report": {
+          "type": "Table",
+          "format": "tsv"
+        }
+      },
+      "timeout_seconds": 30,
+      "normalize": {
+        "drop_lines": [
+          "^#"
+        ]
+      }
+    },
+    "liar": {
+      "description": "Fails, says so on stderr, exits 0 anyway. Must be caught as missing_output.",
+      "command": [
+        "portlab",
+        "liar",
+        "--in",
+        "{{inputs.sequences}}",
+        "--out",
+        "{{outputs.result}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "result": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 30
+    },
+    "slow": {
+      "description": "Outlives its declared budget.",
+      "command": [
+        "portlab",
+        "slow",
+        "--seconds",
+        "30",
+        "--out",
+        "{{outputs.log}}"
+      ],
+      "inputs": {},
+      "outputs": {
+        "log": {
+          "type": "Text",
+          "format": "txt"
+        }
+      },
+      "timeout_seconds": 5
+    },
+    "hungry": {
+      "description": "Allocates past the nano memory cap. Must surface as oom, not as a generic failure.",
+      "command": [
+        "portlab",
+        "hungry",
+        "--megabytes",
+        "3072",
+        "--out",
+        "{{outputs.log}}"
+      ],
+      "inputs": {},
+      "outputs": {
+        "log": {
+          "type": "Text",
+          "format": "txt"
+        }
+      },
+      "timeout_seconds": 120
+    }
+  }
+}

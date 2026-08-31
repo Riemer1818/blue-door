@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bluedoor.bio/schemas/adapter-manifest-0.1.json",
+  "title": "Adapter manifest",
+  "description": "Everything the platform knows about one tool. This is the single source: the HTTP endpoint, the MCP tool definition and the UI form are all projections of it, generated and never hand-maintained in parallel. JSON rather than YAML so it validates directly, needs no parser dependency, and is emitted reliably by a coding agent later.",
+  "type": "object",
+  "required": ["id", "version", "image", "machine_class", "operations"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Catalogue-unique. Matches the directory name."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the wrapped tool, not of this manifest."
+    },
+    "description": { "type": "string" },
+    "homepage": { "type": "string" },
+    "license": { "type": "string" },
+    "image": {
+      "type": "string",
+      "description": "Container reference. A tag is tolerated while iterating; the conformance suite warns until it is pinned by digest, because an unpinned image makes every golden test a lie."
+    },
+    "machine_class": {
+      "type": "string",
+      "enum": ["nano", "standard", "wide", "deep", "gpu-small", "gpu-large"]
+    },
+    "measured": {
+      "type": "object",
+      "description": "Filled in by the profiler (P1), not by hand and not by guesswork. The conformance suite checks the declared class can actually hold these numbers. Absent until measured - an empty field is honest, an invented one is not.",
+      "additionalProperties": false,
+      "properties": {
+        "peak_rss_mb": { "type": "number" },
+        "wall_seconds": { "type": "number" },
+        "fixture": { "type": "string", "description": "Which fixture produced this. A tiny fixture profiles as nano and then falls over on a real genome." }
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "description": "Versioned reference data mounted read-only at run time. Never baked into the image, never downloaded per run - that is what turns a three-second tool into a forty-minute one.",
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "mount"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": "string" },
+          "mount": { "type": "string", "description": "Absolute path inside the container." }
+        }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "description": "One tool, many operations. seqkit alone justifies this shape.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command", "inputs", "outputs"],
+        "additionalProperties": false,
+        "properties": {
+          "description": { "type": "string" },
+          "command": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "argv, never a shell string. Placeholders {{inputs.NAME}} and {{outputs.NAME}} are substituted with container paths. No shell means no quoting bugs and no injection surface."
+          },
+          "stdin": {
+            "type": "string",
+            "description": "Input port name to stream on stdin, for tools that accept nothing else."
+          },
+          "stdout": {
+            "type": "string",
+            "description": "Output port name to capture from stdout, for tools that write results there. Mutually exclusive with that port having a file path."
+          },
+          "inputs": { "$ref": "#/$defs/ports" },
+          "outputs": { "$ref": "#/$defs/ports" },
+          "timeout_seconds": { "type": "integer", "minimum": 1, "default": 300 },
+          "normalize": {
+            "type": "object",
+            "description": "Applied to text outputs before golden comparison. Declared here rather than hardcoded in the runner, because which lines are noise is a fact about the tool. Many tools embed a timestamp or the full command line in their output; without this, every golden test rots overnight.",
+            "additionalProperties": false,
+            "properties": {
+              "drop_lines": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Regexes; matching lines are removed before comparison."
+              },
+              "sort_lines": { "type": "boolean", "default": false }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ports": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "description": "A key from porttypes.json." },
+          "format": { "type": "string", "description": "A format key within that type. Defaults to the type's first format." },
+          "description": { "type": "string" },
+          "required": { "type": "boolean", "default": true }
+        }
+      }
+    }
+  }
+}

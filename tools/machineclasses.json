@@ -1,0 +1,16 @@
+{
+  "$comment": "Hardware as a closed vocabulary. An adapter names a class; it never states raw numbers. Closed means schedulable, priceable and testable, and it means new hardware is a deliberate act rather than something an adapter can inflict on the fleet by accident. Locally these become docker --cpus/--memory; in the cloud they become instance types. The `lane` field routes: interactive classes run on a warm pool, batch classes get a machine that dies with the job.",
+  "classes": {
+    "nano":     { "cpus": 1,  "memory": "2g",   "lane": "interactive", "note": "parsers, API shims, most of the catalogue" },
+    "standard": { "cpus": 4,  "memory": "16g",  "lane": "interactive", "note": "MAFFT, FastTree, Prokka" },
+    "wide":     { "cpus": 32, "memory": "64g",  "lane": "batch",       "note": "blastn against a large database, MMseqs2" },
+    "deep":     { "cpus": 8,  "memory": "256g", "lane": "batch",       "note": "de novo assembly, Kraken2 loading its database into RAM" },
+    "gpu-small":{ "cpus": 8,  "memory": "32g",  "lane": "batch", "gpu": { "count": 1, "vram_gb": 24 }, "note": "ESMFold, ColabFold on short sequences" },
+    "gpu-large":{ "cpus": 12, "memory": "128g", "lane": "batch", "gpu": { "count": 1, "vram_gb": 80 }, "note": "Boltz, RFdiffusion" }
+  },
+  "local_ceiling": {
+    "$comment": "A workstation cannot honour `deep`. The runner clamps to these when running locally and says so, rather than failing to schedule.",
+    "cpus": 4,
+    "memory": "4g"
+  }
+}

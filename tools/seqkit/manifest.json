@@ -1,0 +1,109 @@
+{
+  "id": "seqkit",
+  "version": "2.8.2",
+  "description": "Cross-platform toolkit for FASTA/FASTQ manipulation. First real adapter: a single static Go binary, no reference data, deterministic, already containerised by BioContainers.",
+  "homepage": "https://bioinf.shenwei.me/seqkit/",
+  "license": "MIT",
+  "image": "quay.io/biocontainers/seqkit@sha256:a087c482d265d4209f2e2bd8f44550b0c79616c24f0f64d1f0f08d354bccd101",
+  "machine_class": "nano",
+  "operations": {
+    "stats": {
+      "description": "Summary statistics per input file. Writes TSV to stdout.",
+      "command": [
+        "seqkit",
+        "stats",
+        "-T",
+        "-a",
+        "{{inputs.sequences}}"
+      ],
+      "stdout": "summary",
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "summary": {
+          "type": "Table",
+          "format": "tsv",
+          "description": "One row per input file."
+        }
+      },
+      "timeout_seconds": 60
+    },
+    "revcomp": {
+      "description": "Reverse-complement. -t DNA is explicit because seqkit otherwise warns on stderr and guesses.",
+      "command": [
+        "seqkit",
+        "seq",
+        "-r",
+        "-p",
+        "-t",
+        "DNA",
+        "-o",
+        "{{outputs.reversed}}",
+        "{{inputs.sequences}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "reversed": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 60
+    },
+    "fx2tab": {
+      "description": "Name, length and GC per record. The Sequence to Table crossing on a real tool.",
+      "command": [
+        "seqkit",
+        "fx2tab",
+        "-nlg",
+        "{{inputs.sequences}}"
+      ],
+      "stdout": "table",
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "table": {
+          "type": "Table",
+          "format": "tsv"
+        }
+      },
+      "timeout_seconds": 60
+    },
+    "translate": {
+      "description": "Six-frame-capable translation; default frame 1. Sequence to Sequence, but nucleotide to protein.",
+      "command": [
+        "seqkit",
+        "translate",
+        "-o",
+        "{{outputs.protein}}",
+        "{{inputs.sequences}}"
+      ],
+      "inputs": {
+        "sequences": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "outputs": {
+        "protein": {
+          "type": "Sequence",
+          "format": "fasta"
+        }
+      },
+      "timeout_seconds": 60
+    }
+  }
+}

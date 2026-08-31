@@ -1,0 +1,5 @@
+# The runner and grader are standard library only, so a fresh clone works with no
+# install. jsonschema is the single optional dependency: without it conform.py
+# runs structural checks and warns that the schema was not enforced. CI always
+# installs it, so the schema is enforced on every change regardless.
+jsonschema>=4.0
