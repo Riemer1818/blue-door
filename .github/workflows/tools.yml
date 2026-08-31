@@ -28,3 +28,4 @@ jobs:
       # Adapter conformance cannot catch a wiring bug: BLU-22 passed
       # every adapter check and still produced a wrong tree.
       - run: ./tools/runner/regressions.sh
+      - run: ./tools/runner/executor-test.sh
