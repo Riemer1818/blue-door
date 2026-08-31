@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__linear-bluedoor__linear_get*",
+      "mcp__linear-bluedoor__linear_search*",
+      "mcp__linear-bluedoor__linear_createIssue",
+      "mcp__linear-bluedoor__linear_createComment",
+      "mcp__linear-bluedoor__linear_updateIssue",
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git worktree list)"
+    ],
+    "ask": [
+      "mcp__linear-bluedoor__linear_archive*",
+      "mcp__linear-bluedoor__linear_delete*"
+    ]
+  }
+}

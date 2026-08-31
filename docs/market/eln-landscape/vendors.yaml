@@ -1,0 +1,491 @@
+# ELN / lab-software competitive landscape -- structured source of truth.
+#
+# This file is the expandable part of the system: adding a competitor means appending
+# one record here, then mentioning it in README.md only if it changes the narrative.
+# The prose doc is the read; this file is the data.
+#
+# Field contract:
+#   name          required
+#   layer         1 | 1b | 2 | 3 | 4   (see README.md for what each layer means)
+#   ai_depth      none | bolt-on | through-workflow | ai-native
+#   hq            city, country
+#   founded       year, or null
+#   funding       last PUBLICLY DISCLOSED figure, as a string incl. its date. Never "current".
+#   valuation     string incl. its date, or null
+#   url           vendor homepage
+#   url_verified  true only if someone actually opened it. Default false.
+#   sources       list of ids from sources.md
+#   note          one paragraph: what they are and where they are weak
+#   as_of         when this record was last checked against reality
+#
+# Everything here is a snapshot. Funding and pricing rot fastest; treat any record
+# whose as_of is more than ~6 months old as ASSUMED, not VERIFIED.
+
+meta:
+  compiled: 2026-08-31
+  compiled_by: riemer
+  method: web scan, secondary sources only -- no vendor calls, no demos, no pricing pages pulled
+  confidence: >
+    Positioning and layer assignments are our read. Funding figures are as last disclosed
+    by the cited source and may be stale. Nothing here has been verified with the vendor.
+
+vendors:
+
+  # ---------- Layer 1: incumbents, system of record, enterprise pricing ----------
+
+  - name: Benchling
+    layer: 1
+    ai_depth: bolt-on
+    hq: San Francisco, US
+    founded: 2012
+    funding: "$412M raised (last disclosed)"
+    valuation: "$6.1B (2021)"
+    url: https://www.benchling.com
+    url_verified: false
+    sources: [sacra-benchling, 37degrees]
+    as_of: 2026-08-31
+    note: >
+      The default for molecular biology. Sequence-aware ELN plus registry, inventory and
+      workflows. Free for academics, which is how it won bottom-up. ~$210M ARR reported as of
+      May 2024, ~1,300 customers, ~$175K average contract. AI arrived as a layer -- an Anthropic
+      partnership and structural-biology model integrations -- rather than a rebuild, so the
+      schema underneath is still a decade old.
+
+  - name: Dotmatics
+    layer: 1
+    ai_depth: bolt-on
+    hq: Boston, US
+    founded: null
+    funding: "acquired by Siemens for $5.1B, closed 2025"
+    valuation: "$5.1B (acquisition, 2025)"
+    url: https://www.dotmatics.com
+    url_verified: false
+    sources: [siemens-dotmatics, rdworld-labos]
+    as_of: 2026-08-31
+    note: >
+      Broad chemistry-first R&D suite; GraphPad, SnapGene and Geneious sit under the same roof.
+      Folded into Siemens' AI software portfolio. Expect deep integration with industrial/PLM
+      tooling and slow product velocity while that integration happens -- which is a window.
+
+  - name: Sapio Sciences
+    layer: 1
+    ai_depth: through-workflow
+    hq: Baltimore, US
+    founded: 2007
+    funding: null
+    valuation: null
+    url: https://www.sapiosciences.com
+    url_verified: false
+    sources: [sapio-elain, rdworld-labos]
+    as_of: 2026-08-31
+    note: >
+      The incumbent that moved fastest on AI, and the most aggressive incumbent repositioning
+      in the set. ELaiN launched Sept 2025, marketed as a "third-generation AI lab notebook" /
+      co-scientist; partner ecosystem opened Jan 2026 with NVIDIA BioNeMo, Elsevier and
+      DISGENET. Their pitch leans on two numbers from their own research -- 45% of scientists
+      already use shadow GenAI, 65% repeat experiments they cannot find. Both are vendor-run
+      research; useful framing, not independent evidence.
+
+  - name: SciSure
+    layer: 1
+    ai_depth: bolt-on
+    hq: Groningen, NL + Boston, US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.scisure.com
+    url_verified: false
+    sources: [scisure-labfolder, 37degrees]
+    as_of: 2026-08-31
+    note: >
+      The European roll-up and the most direct incumbent in our own back yard. eLabNext (Dutch)
+      merged with SciShield, then acquired Labfolder and Labregister from Berlin's Labforward in
+      Sept 2025. Strong in academic and mid-market EU labs where data residency matters. AI is
+      early -- which is precisely the gap the EU-sovereignty wedge aims at.
+
+  - name: Revvity Signals
+    layer: 1
+    ai_depth: bolt-on
+    hq: US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.revvitysignals.com
+    url_verified: false
+    sources: [eln-eval-2025]
+    as_of: 2026-08-31
+    note: >
+      Regulated-pharma tier alongside IDBS, STARLIMS, LabWare and Dassault BIOVIA. Validated,
+      GxP-heavy, sold through procurement. Analyst reports still rank Revvity, Dassault and
+      STARLIMS as category leaders. Effectively unreachable without a compliance story, and
+      their customers are effectively unmovable.
+
+  - name: IDBS
+    layer: 1
+    ai_depth: bolt-on
+    hq: UK
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.idbs.com
+    url_verified: false
+    sources: [eln-eval-2025]
+    as_of: 2026-08-31
+    note: Regulated-pharma tier. See Revvity Signals.
+
+  - name: STARLIMS
+    layer: 1
+    ai_depth: bolt-on
+    hq: US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.starlims.com
+    url_verified: false
+    sources: [eln-eval-2025]
+    as_of: 2026-08-31
+    note: Regulated-pharma tier, ranked a category leader by analysts. See Revvity Signals.
+
+  - name: LabWare
+    layer: 1
+    ai_depth: bolt-on
+    hq: Wilmington, US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.labware.com
+    url_verified: false
+    sources: [eln-eval-2025]
+    as_of: 2026-08-31
+    note: Regulated-pharma LIMS tier. See Revvity Signals.
+
+  - name: Dassault BIOVIA
+    layer: 1
+    ai_depth: bolt-on
+    hq: France
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.3ds.com/products/biovia
+    url_verified: false
+    sources: [eln-eval-2025]
+    as_of: 2026-08-31
+    note: Regulated-pharma tier, ranked a category leader by analysts. See Revvity Signals.
+
+  - name: LabArchives
+    layer: 1
+    ai_depth: none
+    hq: US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.labarchives.com
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      The institution-provided default in NIH-funded academia -- bought at university level,
+      not by the lab, which makes it a procurement relationship rather than a product one.
+      Close to zero on AI. That is the wedge newer tools are using.
+
+  - name: Labguru
+    layer: 1
+    ai_depth: none
+    hq: null
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.labguru.com
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      Bundles ELN + LIMS + inventory for 10-30 person biotechs. Usable, and close to zero
+      on AI.
+
+  # ---------- Layer 1b: open source / self-hosted -- the free floor ----------
+
+  - name: eLabFTW
+    layer: 1b
+    ai_depth: none
+    hq: France
+    founded: null
+    funding: "none -- AGPL open source, modest managed-hosting fee"
+    valuation: null
+    url: https://www.elabftw.net
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      The most polished open-source ELN and the single most important vendor on this board for
+      us. Free self-hosted, AGPL. Very strong in European academia for GDPR and data-sovereignty
+      reasons. No AI. It caps what we can charge small EU labs, and it is the incumbent our
+      self-hostable positioning has to beat on something other than price.
+
+  - name: SciNote
+    layer: 1b
+    ai_depth: none
+    hq: null
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.scinote.net
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: Open-core with a generous free tier. Usually the first ELN a lab tries.
+
+  - name: RSpace
+    layer: 1b
+    ai_depth: bolt-on
+    hq: UK
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.researchspace.com
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      Positions as an integration hub -- Slack, GitHub, OneDrive, Figshare, Galaxy -- and is
+      further along on AI than the rest of this tier.
+
+  # ---------- Layer 2: data plumbing ----------
+
+  - name: TetraScience
+    layer: 2
+    ai_depth: through-workflow
+    hq: Boston, US
+    founded: 2014
+    funding: "$80M Series B"
+    valuation: null
+    url: https://www.tetrascience.com
+    url_verified: false
+    sources: [crunchbase-tetrascience]
+    as_of: 2026-08-31
+    note: >
+      The scientific data cloud: ingest from instruments, harmonize into engineered schemas,
+      feed downstream AI. Partnered with Google Cloud. Closest thing the category has to a
+      standard for instrument data -- so a likely integration target, not only a competitor.
+
+  - name: Ganymede
+    layer: 2
+    ai_depth: through-workflow
+    hq: San Francisco, US
+    founded: 2021
+    funding: "$12.75M Series A (2022)"
+    valuation: null
+    url: https://www.ganymede.bio
+    url_verified: false
+    sources: [businesswire-ganymede]
+    as_of: 2026-08-31
+    note: >
+      Developer-first alternative to TetraScience: code-native pipelines rather than a
+      configured product. Appeals to teams who would otherwise build it themselves.
+
+  # ---------- Layer 3: AI-native challengers -- our actual competitive set ----------
+
+  - name: Scispot
+    layer: 3
+    ai_depth: ai-native
+    hq: Toronto, CA
+    founded: 2020
+    funding: "$8M Series A (June 2026)"
+    valuation: null
+    url: https://www.scispot.com
+    url_verified: false
+    sources: [hitconsultant-scispot]
+    as_of: 2026-08-31
+    note: >
+      The most commercially visible AI-native challenger. Positions as an "AI-native operating
+      layer" -- ELN + LIMS + integrations -- with Scibot as the agent over lab data. Also
+      running an aggressive comparison-content SEO play against every incumbent, which is worth
+      studying as a go-to-market in its own right. US/CA SaaS, so no EU-residency answer.
+
+  - name: OMEOS
+    layer: 3
+    ai_depth: ai-native
+    hq: null
+    founded: null
+    funding: "little public data"
+    valuation: null
+    url: null
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: >
+      Occupies the empty quadrant: live instrument streaming plus GPU-backed agentic analysis,
+      free to start, tiers scaling on capacity and integrations. Aimed at instrument-heavy labs
+      -- microscopy, plate readers, sensors -- rather than sequence work. High technical
+      ambition, little public funding data. OPEN: we have no primary source on this one; find
+      their site and confirm before citing them in any strategy document.
+
+  - name: Colabra
+    layer: 3
+    ai_depth: ai-native
+    hq: null
+    founded: null
+    funding: "~$1.5M disclosed"
+    valuation: null
+    url: https://www.colabra.app
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      The Notion-of-the-lab angle: real-time collaboration, strong UX, AI for protocol drafting
+      and summarization, free tier. Weak on sequence tooling, so it lands with teams who hate
+      Benchling's interface more than they need its molecular biology.
+
+  - name: Genemod
+    layer: 3
+    ai_depth: ai-native
+    hq: Seattle, US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.genemod.net
+    url_verified: false
+    sources: [37degrees]
+    as_of: 2026-08-31
+    note: >
+      ELN + inventory for small biotech, now shipping an AI agent and publishing a lot of
+      "agentic LIMS" positioning content. Competes head-on with Scispot for the same
+      sub-100-person lab.
+
+  - name: Albert Invent
+    layer: 3
+    ai_depth: ai-native
+    hq: Oakland, US
+    founded: null
+    funding: "$22.5M Series A (Dec 2024), then a growth round led by J.P. Morgan Private Capital (Feb 2025); ~$45M total"
+    valuation: null
+    url: https://www.albertinvent.com
+    url_verified: false
+    sources: [businesswire-albert]
+    as_of: 2026-08-31
+    note: >
+      Not biotech: an AI R&D platform for chemicals and materials science, a segment with far
+      worse tooling than life sciences. Alongside Uncountable this is the materials-side mirror
+      of the ELN market, and the less crowded half.
+
+  - name: Uncountable
+    layer: 3
+    ai_depth: ai-native
+    hq: US
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.uncountable.com
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: Materials/chemicals R&D platform. The other half of the Albert Invent pair.
+
+  # ---------- Layer 4: autonomous labs -- adjacent, sets the ceiling ----------
+
+  - name: Lila Sciences
+    layer: 4
+    ai_depth: ai-native
+    hq: US
+    founded: null
+    funding: "$200M launch + $235M follow-on; ~$550M total"
+    valuation: "unicorn (undisclosed)"
+    url: null
+    url_verified: false
+    sources: [fierce-lila]
+    as_of: 2026-08-31
+    note: >
+      Flagship Pioneering. "Scientific superintelligence" plus physical autonomous labs. Not a
+      competitor to an ELN, but it is the story pulling capital into the whole category -- which
+      is what makes a seed round in this space fundable at all.
+
+  - name: Automata
+    layer: 4
+    ai_depth: through-workflow
+    hq: UK
+    founded: null
+    funding: "$45M Series C, strategic money from Danaher Ventures"
+    valuation: null
+    url: https://www.automata.tech
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: Lab OS / orchestration tier. Their product is LINQ.
+
+  - name: UniteLabs
+    layer: 4
+    ai_depth: through-workflow
+    hq: EU
+    founded: null
+    funding: null
+    valuation: null
+    url: null
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: >
+      Software-first orchestration with a Python SDK and 100+ hardware connectors, SiLA 2
+      compliant. EU-based. A plausible partner for instrument connectivity rather than a
+      competitor.
+
+  - name: Atinary
+    layer: 4
+    ai_depth: ai-native
+    hq: EU
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.atinary.com
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: >
+      Closed-loop design-make-test-analyze with ABB, Agilent, Bruker and Mettler-Toledo.
+
+  - name: Synthace
+    layer: 4
+    ai_depth: through-workflow
+    hq: UK
+    founded: null
+    funding: null
+    valuation: null
+    url: https://www.synthace.com
+    url_verified: false
+    sources: [rdworld-labos]
+    as_of: 2026-08-31
+    note: Sits beside the orchestration tier on design-of-experiments.
+
+# ---------------------------------------------------------------------------
+# Adjacent categories -- not ELN vendors, but what a lab actually uses instead.
+# These win deals that never appear on a competitive shortlist, so they are not
+# in the `vendors` list above and are not counted in any layer tally.
+# Added 2026-08-31 from the June field notes; see docs/product/user-research/.
+# ---------------------------------------------------------------------------
+
+adjacent_categories:
+
+  - name: The route-around stack
+    kind: incumbent-by-default
+    examples: [OneNote, Microsoft Word, Microsoft Excel, OneDrive, Obsidian, Nextcloud, thegood.cloud]
+    evidence: [jenny-bakker-2026-06-16, niels-dam-2026-06-18]
+    as_of: 2026-08-31
+    note: >
+      What the lab journal is actually kept in. Jenny Bakker uses eLABjournal (SciSure) for the
+      strain collection and protocol sharing, but keeps the journal itself in OneNote and growth
+      experiment data in Word/Excel on OneDrive, because the ELN is "barely usable on the phone".
+      Niels Dam keeps Obsidian notes beside the ELN because the ELN is not LLM-searchable.
+      Free, already installed, zero switching cost, and no vendor to displace. This is the real
+      competitor and it appears on no market map.
+
+  - name: University "academic AI" portals
+    kind: adjacent-substitute
+    examples: [institution-provided LLM platforms, EU-hosted, university-funded]
+    evidence: [niels-dam-2026-06-18]
+    as_of: 2026-08-31
+    note: >
+      Institutional AI platforms -- chat, custom assistants, a settings "lab" -- paid for by the
+      university and processed within the EU. Researchers use these on real research data
+      precisely because they will not hand it to external AI. Free at the point of use, already
+      EU-hosted, already trusted. Either the main obstacle to an EU-sovereignty pitch or its
+      distribution channel. OPEN: we do not know which platform, who operates it, or how it is
+      procured -- that is the single most valuable unknown on this board.

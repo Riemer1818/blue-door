@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 wires `dark:` to prefers-color-scheme out of the box, which a
+ * toggle cannot override. This repoints it at the .dark class that next-themes
+ * puts on <html>; "system" still works, because next-themes adds the class when
+ * the OS asks for dark.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --- react-grid-layout chrome -------------------------------------------- */
+
+/* The drop target shown while a card is being dragged. */
+.react-grid-item.react-grid-placeholder {
+  background: rgb(148 163 184 / 0.35);
+  border-radius: 0.5rem;
+}
+
+/*
+  Resize handles. The library ships a 5x5px corner tick at opacity 0 until hover,
+  which is close to undiscoverable — nobody finds a feature they cannot see. So:
+  the corner grip stays faintly visible at rest, all three handles come up fully
+  on hover, and the hit areas are enlarged well past the pixels they draw.
+*/
+.react-grid-item > .react-resizable-handle {
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle,
+.react-grid-item.resizing > .react-resizable-handle {
+  opacity: 1;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  border-color: rgb(100 116 139);
+}
+
+/* Corner: the discoverable one. Visible at rest, and a 24px target. */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-se {
+  width: 24px;
+  height: 24px;
+  opacity: 0.4;
+}
+
+.react-grid-item > .react-resizable-handle.react-resizable-handle-se::after {
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+}
+
+/*
+  Edge handles, restyled from the library's rotated corner ticks into bars that
+  read as "drag this edge". transform: none cancels that rotation.
+*/
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e {
+  transform: none;
+}
+
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  left: 50%;
+  width: 56px;
+  height: 14px;
+  margin-left: -28px;
+}
+
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e {
+  top: 50%;
+  width: 14px;
+  height: 56px;
+  margin-top: -28px;
+}
+
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s::after,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e::after {
+  content: "";
+  position: absolute;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(100 116 139 / 0.6);
+}
+
+/*
+  width/height: auto matters. The library's base ::after fixes both at 5px, and a
+  fixed width beats left+right insets — without the reset these bars render as
+  5px stubs instead of spanning the handle.
+*/
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s::after {
+  left: 8px;
+  right: 8px;
+  bottom: 3px;
+  width: auto;
+  height: 3px;
+}
+
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e::after {
+  top: 8px;
+  bottom: 8px;
+  right: 3px;
+  width: 3px;
+  height: auto;
+}
+
+.dark .react-grid-item > .react-resizable-handle::after {
+  border-color: rgb(148 163 184);
+}
+
+.dark .react-grid-item > .react-resizable-handle.react-resizable-handle-s::after,
+.dark .react-grid-item > .react-resizable-handle.react-resizable-handle-e::after {
+  background: rgb(148 163 184 / 0.6);
+}
+
+/*
+  The whole card is a drag handle, so it carries cursor: move. The controls
+  inside it are exempted from dragging (see dragConfig.cancel) and must say so
+  with their cursor too — a text field that looks draggable is a lie.
+*/
+.react-grid-item :is(input, textarea, [contenteditable]) {
+  cursor: text;
+}
+
+.react-grid-item :is(button, select, a, label) {
+  cursor: pointer;
+}
