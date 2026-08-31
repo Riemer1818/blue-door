@@ -125,6 +125,27 @@ def sniff(path, port):
     return False, "file is empty"
 
 
+def timeout_evidence(adapter_dir, op, inputs, elapsed) -> dict:
+    """Numbers that distinguish 'their data was huge' from 'our budget was wrong'."""
+    input_bytes = sum(
+        pathlib.Path(p).stat().st_size for p in inputs.values()
+        if pathlib.Path(p).exists()
+    )
+    fixture_bytes = sum(
+        f.stat().st_size
+        for f in pathlib.Path(adapter_dir).glob("fixtures/*/inputs/*") if f.is_file()
+    )
+    evidence = {
+        "budget_seconds": op.get("timeout_seconds", 300),
+        "elapsed_seconds": round(elapsed, 1),
+        "input_bytes": input_bytes,
+        "fixture_bytes": fixture_bytes,
+    }
+    if fixture_bytes:
+        evidence["input_vs_fixture"] = round(input_bytes / fixture_bytes, 1)
+    return evidence
+
+
 def check_preconditions(op, inputs) -> list[str]:
     """Enforce `requires` before running anything.
 
@@ -274,6 +295,13 @@ def run_operation(adapter_dir, op_name, inputs, workdir=None, keep=False):
 
     if timed_out:
         report["outcome"] = "timeout"
+        # Timeout is the one outcome whose correct action depends on the run, so
+        # it carries the numbers even though its family is fixed. "180s budget,
+        # 182s elapsed, input 40x the fixture" tells a person whether their data
+        # was enormous or our budget was wrong - and that is available now,
+        # without the profiler, because every adapter ships a fixture to compare
+        # against.
+        report["evidence"] = timeout_evidence(adapter_dir, op, inputs, elapsed)
     elif exit_code == 125:
         # Docker exits 125 when the run never happened - unknown image, bad flag,
         # daemon refusal. Distinct from the tool failing, so the platform can say

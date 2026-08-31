@@ -22,6 +22,7 @@ cross-session decision, not a local one.
 """
 
 import json
+import pathlib
 import sys
 import time
 import uuid
@@ -45,10 +46,20 @@ KINDS = {
     "run.finished": "outcome, seconds, outputs? - outcome vocabulary depends on run kind",
 }
 
-# Two vocabularies, deliberately separate. A tool run and an agent run do not end
-# in the same kind of thing, and collapsing them into one `outcome` field forces a
-# console to guess which it is holding.
-TOOL_OUTCOMES = {
+# Two vocabularies, deliberately separate, and both read from tools/outcomes.json
+# rather than declared here. A tool run and an agent run do not end in the same
+# kind of thing, and collapsing them into one `outcome` field forces a console to
+# guess which it is holding. The file is shared with the web app, which generates
+# its types from it - one statement, two readers.
+_VOCAB = json.loads(
+    (pathlib.Path(__file__).resolve().parent.parent / "outcomes.json").read_text()
+)
+TOOL_OUTCOMES = {k: v["description"] for k, v in _VOCAB["tool_outcomes"].items()}
+AGENT_OUTCOMES = {k: v["description"] for k, v in _VOCAB["agent_outcomes"].items()}
+OUTCOME_ACTION = {k: v["action"] for k, v in _VOCAB["tool_outcomes"].items()}
+ACTION_ORDER = _VOCAB["actions"]["order"]
+
+OUTCOMES = {
     "ok": "declared outputs exist, are non-empty, and detect as the declared type",
     "nonzero_exit": "the tool reported failure honestly",
     "timeout": "exceeded the declared budget",
@@ -98,9 +109,11 @@ OUTCOME_ACTION = {
 
 OUTCOMES = {"tool": TOOL_OUTCOMES, "pipeline": TOOL_OUTCOMES, "agent": AGENT_OUTCOMES}
 
-assert set(OUTCOME_ACTION) == set(TOOL_OUTCOMES), (
-    "every tool outcome needs an action, or a UI grouping by action will silently "
-    "drop it into whichever bucket happens to be last"
+# Every action must be one the UI knows how to group under. The earlier version
+# of this assertion caught `timeout` having no action at all; this one catches an
+# action nobody renders, which fails the same way and just as quietly.
+assert set(OUTCOME_ACTION.values()) <= set(ACTION_ORDER), (
+    f"unknown action(s): {set(OUTCOME_ACTION.values()) - set(ACTION_ORDER)}"
 )
 
 # Phases of an adapter-agent run, in order. Named here rather than in the prompt
