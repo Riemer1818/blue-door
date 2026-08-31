@@ -25,6 +25,24 @@ from typing import Any
 SCHEMA_VERSION = "0.1"
 
 
+def stated(value, basis: str, note: str = "") -> dict:
+    """A value plus how it was arrived at.
+
+    Anything that can be found or guessed carries its provenance as a field,
+    never as the absence of one. "no license" and "assumed MIT because the repo
+    has no LICENSE file but setup.py says so" must not both arrive as a missing
+    key - the second is the one that becomes a legal problem quietly, and it is
+    only visible if it is stated.
+
+    basis: found    read directly from the repo, image metadata or registry
+           assumed  inferred from something weaker, with the reasoning in `note`
+           unknown  could not be established at all
+    """
+    if basis not in ("found", "assumed", "unknown"):
+        raise ValueError(f"basis must be found|assumed|unknown, got '{basis}'")
+    return {"value": value, "basis": basis, "note": note}
+
+
 @dataclass
 class Caveat:
     """Something the agent could not establish. Present even on success.
@@ -47,8 +65,15 @@ class Report:
     seconds: float = 0.0
 
     # Trust anchor. Every golden below is only as good as this.
-    image: dict = field(default_factory=dict)       # reference, digest, origin
+    image: dict = field(default_factory=dict)       # reference, digest, origin, basis
     source: dict = field(default_factory=dict)      # repository, ref, commit
+    version: dict = field(default_factory=dict)     # stated() - versions get guessed too
+
+    # What is needed to pick this run back up. An agent run is expensive and
+    # rare; the tool runs it produces are cheap and frequent. Throwing away what
+    # it learned means paying that cost again for an upgrade, a repair, or a
+    # reviewer asking for one change.
+    session: dict = field(default_factory=dict)
 
     # What would land in the repository. Promotion is a copytree, so a reviewer
     # should see the exact file list rather than infer it.
@@ -64,36 +89,77 @@ class Report:
     caveats: list = field(default_factory=list)
 
     def add_caveat(self, kind: str, detail: str, where: str = "") -> None:
+        """Caveats the agent volunteers. Derived ones are computed separately."""
         self.caveats.append(asdict(Caveat(kind=kind, detail=detail, where=where)))
 
-    def derive_caveats(self) -> None:
+    def derive_caveats(self) -> list[dict]:
         """Caveats a reviewer should never have to notice for themselves.
 
-        Each of these is a way for an adapter to pass every mechanical check and
-        still be wrong in a way only a person can judge.
+        Each is a way for an adapter to pass every mechanical check and still be
+        wrong in a way only a person can judge.
+
+        Returns a fresh list rather than mutating self.caveats, so writing the
+        report twice - a retry, or writing to two places - cannot duplicate them.
+        Non-idempotence here would only bite under retry, which is exactly when
+        nobody is reading carefully.
         """
-        if self.license.get("basis") != "found":
-            self.add_caveat(
-                "license_unknown",
-                f"license recorded as {self.license.get('value') or 'none'} "
-                f"({self.license.get('basis', 'unknown')}). Nothing enforces this yet, "
-                f"so this gate is where it gets looked at.",
-            )
+        derived: list[dict] = []
+
+        def note(kind, detail, where=""):
+            derived.append(asdict(Caveat(kind=kind, detail=detail, where=where)))
+
+        for name, value in (("license", self.license), ("version", self.version)):
+            basis = value.get("basis", "unknown")
+            if basis != "found":
+                why = value.get("note", "")
+                note(
+                    f"{name}_unknown",
+                    f"{name} recorded as {value.get('value') or 'none'} ({basis})."
+                    + (f" {why}" if why else "")
+                    + (" Nothing enforces this yet, so this gate is where it gets"
+                       " looked at." if name == "license" else ""),
+                )
+
         for port in self.port_types_used:
             if port.get("type") == "Text":
-                self.add_caveat(
+                note(
                     "text_fallback",
                     "typed as Text, the escape hatch. It will pass conformance and "
                     "compose with nothing. Check whether a real type fits, or whether "
                     "the vocabulary needs extending.",
                     where=f"{port.get('operation')}.{port.get('port')}",
                 )
+
+        # The image choice is the agent's own judgement call, which makes it the
+        # caveat most exposed to an agent that would rather file a quiet report:
+        # not mentioning the three other candidates costs it nothing. So it is
+        # derived from the candidate set find_image returns, never volunteered.
+        candidates = self.image.get("candidates") or []
+        chosen = self.image.get("reference")
+        if len(candidates) > 1 and chosen and chosen != candidates[0]:
+            note(
+                "ambiguous_image",
+                f"chose {chosen} over the newest candidate {candidates[0]}. "
+                f"{len(candidates)} were available: {', '.join(candidates[:4])}"
+                + (" ..." if len(candidates) > 4 else ""),
+            )
+        elif self.image.get("basis") == "assumed":
+            note(
+                "ambiguous_image",
+                f"the package name behind {chosen} was inferred rather than "
+                f"confirmed. {self.image.get('note', '')}".strip(),
+            )
+
         if self.image.get("origin") == "built_from_source" and not self.image.get("digest"):
-            self.add_caveat(
+            note(
                 "untested_path",
                 "image was built here but has no digest, so goldens cannot be tied to "
                 "a specific image.",
             )
+        return derived
+
+    def all_caveats(self) -> list[dict]:
+        return self.caveats + self.derive_caveats()
 
     def summary_line(self) -> str:
         c = self.conformance
@@ -101,12 +167,14 @@ class Report:
             f"{self.adapter_id}: {self.outcome} | "
             f"conformance {'passed' if c.get('passed') else 'FAILED'} "
             f"{c.get('checks', 0)} checks | "
-            f"{len(self.caveats)} caveat(s) | {self.seconds:.0f}s"
+            f"{len(self.all_caveats())} caveat(s) | {self.seconds:.0f}s"
         )
 
     def write(self, path: pathlib.Path) -> pathlib.Path:
-        self.derive_caveats()
-        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
+        """Idempotent: derived caveats are computed fresh, never accumulated."""
+        payload = asdict(self)
+        payload["caveats"] = self.all_caveats()
+        path.write_text(json.dumps(payload, indent=2) + "\n")
         return path
 
 
