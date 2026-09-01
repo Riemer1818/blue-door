@@ -124,10 +124,26 @@ def static_checks(manifest, adapter_dir):
             side = "inputs" if key == "stdin" else "outputs"
             if ref and ref not in op.get(side, {}):
                 problems.append(f"{op_name}: {key} names '{ref}', which is not a declared {side[:-1]} port")
-        if "measured" in manifest:
-            cap_gb = int(MACHINE_CLASSES["classes"][manifest["machine_class"]]["memory"].rstrip("g"))
-            if manifest["measured"].get("peak_rss_mb", 0) > cap_gb * 1024:
-                problems.append("measured peak_rss_mb exceeds the declared machine class")
+    if "measured" in manifest and manifest["measured"].get("peak_rss_mb"):
+        peak = manifest["measured"]["peak_rss_mb"]
+        cap_mb = int(MACHINE_CLASSES["classes"][manifest["machine_class"]]
+                     ["memory"].rstrip("g")) * 1024
+        if peak > cap_mb:
+            problems.append(
+                f"measured peak {peak} MB exceeds the {manifest['machine_class']} "
+                f"cap of {cap_mb} MB - this adapter will OOM"
+            )
+        # NOTHING WARNS ABOUT OVER-PROVISIONING, deliberately. Declaring a class
+        # larger than measured is safe, and right-sizing it is optimisation we are
+        # not doing yet - so a warning on every adapter would fire constantly,
+        # never be acted on, and teach people to skip warnings. The same argument
+        # that made ambiguous_image firing on every correctly-pinned run a real
+        # problem rather than a cosmetic one.
+        #
+        # `measured` is still recorded. When provisioning is worth optimising the
+        # evidence is already there, and profile.py --suggest-class answers on
+        # demand. Under-provisioning stays a hard failure above: too small is an
+        # OOM, too large is a bill nobody is reading yet.
     return problems, warnings
 
 

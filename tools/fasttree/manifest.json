@@ -8,7 +8,7 @@
   "machine_class": "standard",
   "operations": {
     "infer": {
-      "description": "-nt selects nucleotide mode; without it FastTree silently assumes protein and returns a wrong tree rather than an error.",
+      "description": "-nt selects nucleotide mode. Without it FastTree assumes protein and returns a wrong tree rather than an error; WITH it, a protein alignment produces a plausible tree under the wrong model, which is worse. Hence requires.alphabet - see BLU-22.",
       "command": [
         "FastTree",
         "-nt",
@@ -18,7 +18,10 @@
       "inputs": {
         "alignment": {
           "type": "Alignment",
-          "format": "fasta"
+          "format": "fasta",
+          "requires": {
+            "alphabet": "nucleotide"
+          }
         }
       },
       "outputs": {

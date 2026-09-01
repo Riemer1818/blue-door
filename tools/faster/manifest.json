@@ -1,0 +1,264 @@
+{
+  "id": "faster",
+  "version": "0.2.5",
+  "description": "Fast statistics and filtering for a FASTQ file, in Rust. Every mode writes its result to stdout; filter modes additionally write a kept/filtered summary to stderr, which is not captured. Exactly one mode flag may be given per invocation, so each mode is a separate operation here.",
+  "homepage": "https://github.com/angelovangel/faster",
+  "license": "MIT",
+  "image": "doorway/faster:0.2.5-adapter",
+  "machine_class": "standard",
+  "operations": {
+    "stats": {
+      "description": "Per-file summary: reads, bases, N bases, min/max/mean length, length quartiles, N50, Q20% and Q30%. Header row is printed once, then one row per input file. The first column is the input path as seen inside the container, which the runner stages deterministically. Note faster does not reject FASTA: given unquality-bearing input it still exits 0 and reports Q20_percent and Q30_percent as 0.00, so the reads port is typed fastq deliberately.",
+      "command": [
+        "faster",
+        "--table",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "summary",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "Reads to summarise. Plain or gzipped FASTQ."
+        }
+      },
+      "outputs": {
+        "summary": {
+          "type": "Table",
+          "format": "tsv",
+          "description": "One header row plus one row per input file."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "read_lengths": {
+      "description": "Length of every read, one value per line, in input order. Headerless and unlabelled, hence Text - see the PerRecordMetric type proposal.",
+      "command": [
+        "faster",
+        "--len",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "lengths",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "lengths": {
+          "type": "Text",
+          "format": "txt",
+          "description": "One integer per read, positionally aligned with the input records."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "gc_content": {
+      "description": "GC fraction of every read, one value per line, in input order. Values are f32 printed with Rust's default float formatting, so the number of decimals varies per line; that is deterministic, not noise.",
+      "command": [
+        "faster",
+        "--gc",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "gc",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "gc": {
+          "type": "Text",
+          "format": "txt",
+          "description": "One GC fraction in 0..1 per read, positionally aligned with the input records."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "mean_quality": {
+      "description": "Mean phred score of every read, four decimals, one value per line. faster averages the per-base error probabilities and converts the mean back to phred, rather than taking the arithmetic mean of phred scores; this is the tool's main reason to exist and the numbers will not agree with tools that do the naive thing.",
+      "command": [
+        "faster",
+        "--qscore",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "qscores",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "qscores": {
+          "type": "Text",
+          "format": "txt",
+          "description": "One mean phred score per read, positionally aligned with the input records."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "filter_by_length": {
+      "description": "Keep reads strictly longer than 500 bp. The threshold is fixed because the manifest schema has no parameter mechanism; a negative value would invert the comparison. Kept/filtered counts go to stderr and are not captured. If nothing passes the filter the output is empty and the run is reported missing_output rather than ok.",
+      "command": [
+        "faster",
+        "--filterl",
+        "500",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "filtered",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "filtered": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "Reads longer than 500 bp, in input order."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "filter_by_quality": {
+      "description": "Keep reads whose mean phred score (computed the probability-averaging way, as in mean_quality) is strictly above 10. Kept/filtered counts go to stderr and are not captured.",
+      "command": [
+        "faster",
+        "--filterq",
+        "10",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "filtered",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "filtered": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "Reads with mean phred above 10, in input order."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "filter_low_complexity": {
+      "description": "Drop low-complexity reads using a DUST score over 64 bp windows, keeping reads scoring at or below 2.0. Upstream's own test asserts that real biological reads all survive this threshold. A negative threshold would invert the filter to keep only low-complexity reads.",
+      "command": [
+        "faster",
+        "--dust",
+        "2.0",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "filtered",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "filtered": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "Reads whose maximum windowed DUST score is at most 2.0."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "subsample": {
+      "description": "Keep one quarter of the reads. This is systematic, not random: faster accumulates the proportion across records and emits a read each time the accumulator crosses 1.0, so there is no RNG and no seed, and repeated runs return the same reads. Do not use it where a statistically random sample is required.",
+      "command": [
+        "faster",
+        "--sample",
+        "0.25",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "sampled",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "sampled": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "Every fourth read, in input order."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "trim_front": {
+      "description": "Remove the first 10 bases of every read, sequence and quality together. faster indexes the read without a bounds check, so it panics (exit 101, no output) if any read is shorter than the trim length. 10 is chosen to be safe on essentially any real library; a longer trim needs the input to be length-filtered first.",
+      "command": [
+        "faster",
+        "--trim_front",
+        "10",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "trimmed",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "trimmed": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "All reads, 10 bases shorter at the 5' end."
+        }
+      },
+      "timeout_seconds": 300
+    },
+    "trim_tail": {
+      "description": "Remove the last 10 bases of every read, sequence and quality together. Same unchecked-index caveat as trim_front: a read shorter than the trim length panics the process.",
+      "command": [
+        "faster",
+        "--trim_tail",
+        "10",
+        "{{inputs.reads}}"
+      ],
+      "stdout": "trimmed",
+      "inputs": {
+        "reads": {
+          "type": "Sequence",
+          "format": "fastq"
+        }
+      },
+      "outputs": {
+        "trimmed": {
+          "type": "Sequence",
+          "format": "fastq",
+          "description": "All reads, 10 bases shorter at the 3' end."
+        }
+      },
+      "timeout_seconds": 300
+    }
+  },
+  "source": {
+    "repository": "https://github.com/angelovangel/faster",
+    "ref": "master",
+    "commit": "21b9657c5214c6c6dbc5440c3378c3381036c9d6",
+    "image_origin": "built_from_source",
+    "dockerfile": "Dockerfile"
+  },
+  "provenance": {
+    "authored_by": "claude-adapter-agent",
+    "authored_at": "2026-08-31"
+  },
+  "measured": {
+    "peak_rss_mb": 5.2,
+    "wall_seconds": 0.311,
+    "fixture": "basic/subsample"
+  }
+}

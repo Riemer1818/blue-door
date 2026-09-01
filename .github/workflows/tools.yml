@@ -25,3 +25,7 @@ jobs:
       - run: ./tools/build-local-images.sh
       - run: ./tools/pull-images.sh
       - run: python3 tools/runner/conform.py
+      # Adapter conformance cannot catch a wiring bug: BLU-22 passed
+      # every adapter check and still produced a wrong tree.
+      - run: ./tools/runner/regressions.sh
+      - run: ./tools/runner/executor-test.sh

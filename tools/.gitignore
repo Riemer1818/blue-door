@@ -1,3 +1,5 @@
 # Runner scratch space. Only ever produced by --keep or a failed run.
 doorway-*/
 __pycache__/
+agent/.venv/
+.runs/

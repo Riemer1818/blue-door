@@ -24,6 +24,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from alphabet import detect as detect_alphabet  # noqa: E402
 from run import extension_for, run_operation  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -46,12 +47,41 @@ def port_signature(port):
     return f"{port['type']}/{format_of(port)}"
 
 
-def validate(pipeline):
-    """Resolve and type-check every wire. Returns (steps_in_order, problems)."""
+def satisfies(required: str, actual: str | None) -> bool:
+    """Does an actual alphabet satisfy a constraint?
+
+    An unknown or ambiguous alphabet never satisfies a constraint. That is the
+    whole lesson of BLU-22: a plausible answer computed under the wrong model is
+    worse than a refusal, so uncertainty must block rather than be resolved by
+    optimism.
+    """
+    if actual in (None, "ambiguous", "not_sequence"):
+        return False
+    if required == "nucleotide":
+        return actual in ("dna", "rna")
+    return actual == required
+
+
+def validate(pipeline, inputs: dict | None = None):
+    """Resolve and type-check every wire. Returns (steps_in_order, problems).
+
+    When actual input files are supplied their alphabet is detected and
+    propagated through the graph, so a constraint can be checked against what the
+    data really is rather than what a manifest hoped. Without files the structural
+    checks still run; the alphabet checks simply have nothing to check.
+    """
     problems, produced, ordered = [], {}, []
+    alphabets: dict[str, str | None] = {}
 
     for name, port in pipeline.get("inputs", {}).items():
-        produced[f"@input.{name}"] = ("pipeline input", port)
+        ref = f"@input.{name}"
+        produced[ref] = ("pipeline input", port)
+        alphabets[ref] = port.get("alphabet")
+        if inputs and name in inputs:
+            # Detection beats declaration for a real file: the manifest states a
+            # contract, the bytes state a fact.
+            found = detect_alphabet(pathlib.Path(inputs[name]).read_text(errors="replace"))
+            alphabets[ref] = found["alphabet"]
 
     for step in pipeline["steps"]:
         try:
@@ -76,9 +106,27 @@ def validate(pipeline):
                 problems.append(
                     f"{step['id']}.{port_name}: type mismatch - wants {want}, '{ref}' yields {got}"
                 )
+            required = (port.get("requires") or {}).get("alphabet")
+            if required:
+                actual = alphabets.get(ref)
+                if not satisfies(required, actual):
+                    problems.append(
+                        f"{step['id']}.{port_name}: alphabet mismatch - needs "
+                        f"{required}, '{ref}' is {actual or 'undeclared'}"
+                    )
 
         for port_name, port in op["outputs"].items():
-            produced[f"{step['id']}.{port_name}"] = (step["id"], port)
+            ref = f"{step['id']}.{port_name}"
+            produced[ref] = (step["id"], port)
+            # Most tools are pass-through: an aligner emits whichever alphabet it
+            # was given. alphabet_from follows the chain so a constraint three
+            # steps downstream still sees what actually entered at the top.
+            source = port.get("alphabet_from")
+            alphabets[ref] = (
+                alphabets.get(f"{step['id']}.{source}")
+                or alphabets.get(step.get("wire", {}).get(source, ""))
+                if source else port.get("alphabet")
+            )
         ordered.append((step, manifest, op_name))
 
     for name, ref in pipeline.get("outputs", {}).items():
@@ -143,7 +191,8 @@ def main():
     args = ap.parse_args()
 
     pipeline = json.loads(pathlib.Path(args.pipeline).read_text())
-    ordered, problems = validate(pipeline)
+    supplied = dict(kv.split("=", 1) for kv in args.input)
+    ordered, problems = validate(pipeline, supplied)
 
     print(f"{pipeline['id']} {DIM}{pipeline.get('description','')}{RESET}")
     for step, manifest, op_name in ordered:
@@ -159,7 +208,7 @@ def main():
     if args.check:
         return 0
 
-    record = execute(pipeline, ordered, dict(kv.split("=", 1) for kv in args.input))
+    record = execute(pipeline, ordered, supplied)
     print()
     for s in record["steps"]:
         mark = GREEN + "ok" + RESET if s["outcome"] == "ok" else RED + s["outcome"] + RESET

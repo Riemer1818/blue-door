@@ -239,6 +239,37 @@
           "required": {
             "type": "boolean",
             "default": true
+          },
+          "alphabet": {
+            "type": "string",
+            "enum": [
+              "dna",
+              "rna",
+              "protein",
+              "any"
+            ],
+            "description": "The residue alphabet this port carries, when it is fixed. Omit when the tool does not care."
+          },
+          "alphabet_from": {
+            "type": "string",
+            "description": "For an output whose alphabet is whatever went in. Names an input port. Most tools are pass-through - MAFFT aligns protein or DNA and emits whichever it was given - so a fixed alphabet would be a lie for them."
+          },
+          "requires": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Constraints this input places on whatever is wired to it. Only the facets named here are checked; everything else stays unconstrained, so an adapter that does not care needs no change.",
+            "properties": {
+              "alphabet": {
+                "type": "string",
+                "enum": [
+                  "dna",
+                  "rna",
+                  "nucleotide",
+                  "protein"
+                ],
+                "description": "'nucleotide' accepts dna or rna. This is the FastTree case: -nt is a nucleotide model and protein is wrong for it, but either nucleic acid is fine."
+              }
+            }
           }
         }
       }

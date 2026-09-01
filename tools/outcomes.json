@@ -1,0 +1,71 @@
+{
+  "$comment": "The run outcome vocabulary, as data, so it is stated once and read twice. events.py reads it at import and asserts every tool outcome has an action; web/src/server generates its types from the same file. Restating it in TypeScript would give a compile-time check at the cost of two statements of one vocabulary drifting silently - the alphabet problem again, and a compile error about a stale copy is worse than a runtime assertion about the real one.",
+  "version": "1.0",
+  "tool_outcomes": {
+    "ok": {
+      "description": "declared outputs exist, are non-empty, and detect as the declared type",
+      "action": "nothing"
+    },
+    "nonzero_exit": {
+      "description": "the tool reported failure honestly",
+      "action": "look at the data, or the tool"
+    },
+    "timeout": {
+      "description": "exceeded the declared budget",
+      "action": "nothing; we fix it"
+    },
+    "oom": {
+      "description": "killed against the machine class memory cap",
+      "action": "nothing; we fix it"
+    },
+    "precondition_failed": {
+      "description": "an input did not satisfy what the operation requires, so it never ran - the wrong kind of file, not a tool or platform failure",
+      "action": "choose a different file"
+    },
+    "missing_output": {
+      "description": "a declared output is absent or empty, whatever the exit code",
+      "action": "look at the data, or the tool"
+    },
+    "type_mismatch": {
+      "description": "an output exists but is not the declared type",
+      "action": "nothing; we fix it"
+    },
+    "image_missing": {
+      "description": "the image could not be obtained - infrastructure, not the tool",
+      "action": "nothing; we fix it"
+    }
+  },
+  "agent_outcomes": {
+    "conformant": {
+      "description": "adapter drafted and passing conform.py, ready for review"
+    },
+    "needs_review": {
+      "description": "conformant, but with a caveat a human should see - unknown license, or a port that fell back to the Text escape hatch"
+    },
+    "gave_up": {
+      "description": "could not produce a conformant adapter; the report says what it could not determine. The honest outcome, and far better than a plausible adapter nobody can trust"
+    },
+    "rejected": {
+      "description": "the run touched files outside its own adapter directory and was discarded. A guardrail trip, not a tool problem"
+    }
+  },
+  "actions": {
+    "$comment": "Outcomes are grouped by what a person does next, not by what went wrong. precondition_failed and oom are both 'no result', but one is fixed by choosing a different file and the other by us; telling someone to wait when they are one dropdown from done is a worse error than not grouping. Adding an outcome without an action is caught by an assertion in events.py, which fired the first time it ran - timeout had none, in both of our tables.",
+    "order": [
+      "nothing",
+      "choose a different file",
+      "look at the data, or the tool",
+      "nothing; we fix it"
+    ]
+  },
+  "evidence": {
+    "$comment": "timeout is the one outcome whose correct action genuinely depends on the run, so it carries numbers even inside a coarse bucket. '180s budget, 182s elapsed, input 40x the profiling fixture' tells a person which case they are in. The family stays fixed rather than being derived per run - a derived family makes aggregate counts unstable, since 'our problem: 12' would start depending on whether `measured` happened to be populated.",
+    "timeout": [
+      "budget_seconds",
+      "elapsed_seconds",
+      "input_bytes",
+      "fixture_bytes",
+      "input_vs_fixture"
+    ]
+  }
+}

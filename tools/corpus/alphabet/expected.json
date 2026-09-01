@@ -1,0 +1,13 @@
+{
+  "$comment": "Both implementations must agree here - tools/runner/alphabet.py and web/src/server/tools/detect.ts. Two implementations of one rule are fine; two rules are not, and this corpus is what proves they have not become two rules. Each case exists because it is a way to be wrong, not because it is a way to be right.",
+  "cases": {
+    "01-protein-recA.fasta": {"alphabet": "protein", "why": "protein-only residues settle it outright, whatever the counts say"},
+    "02-dna-plain.fasta": {"alphabet": "dna", "why": "the ordinary case"},
+    "03-rna.fasta": {"alphabet": "rna", "why": "U outnumbers T"},
+    "04-ambiguous-short-acgt.fasta": {"alphabet": "ambiguous", "why": "a short peptide of only ACGT is genuinely indistinguishable from DNA; no threshold rescues this and guessing here is how BLU-22 happens again"},
+    "05-aligned-protein.aln.fasta": {"alphabet": "protein", "why": "gaps must be stripped before counting, and this is the exact input that must be refused for a nucleotide-only port"},
+    "06-dna-fastq-protein-looking-quality.fastq": {"alphabet": "dna", "why": "quality lines are deliberately full of E, F, I, L, P and Q - counting them detects a nanopore run as protein with certain confidence, which was a real bug"},
+    "07-newick.nwk": {"alphabet": "not_sequence", "why": "a tree is not a sequence; a parser that only skips headers eats the taxon names and answers confidently about a file it should refuse"},
+    "08-table.tsv": {"alphabet": "not_sequence", "why": "unrecognised container"}
+  }
+}
