@@ -29,7 +29,7 @@
   "session": {
     "sdk_session_id": "70cd0c82-a418-41fa-8f3f-83222204ac24",
     "resumable": true,
-    "archive": "/home/thartist/Desktop/bluedoor-agent/tools/.runs/e38f0f9191b6/faster-report.tar.gz",
+    "archive": "/home/thartist/Desktop/blue-door/bluedoor-agent/tools/.runs/e38f0f9191b6/faster-report.tar.gz",
     "resume_hint": ""
   },
   "promotable": [

@@ -41,7 +41,7 @@ dev one, which holds real work:
 import base64, json, pathlib, sys, time, urllib.parse, urllib.request, uuid
 
 BASE = "http://localhost:3314/api/trpc"
-EXAMPLES = pathlib.Path("/home/thartist/Desktop/bluedoor/tools/examples")
+EXAMPLES = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor/tools/examples")
 RUN = uuid.uuid4().hex[:8]
 
 failures = []
@@ -126,7 +126,7 @@ check("produced a Tree", tree and tree[0]["portType"] == "Tree")
 print("\n--- BLU-22: the protein path is refused end to end ---")
 prot = call("files.upload", {"parentId": None, "name": f"{RUN}-protein.aln.fasta",
     "content": base64.b64encode(
-        pathlib.Path("/home/thartist/Desktop/bluedoor-agent/tools/corpus/alphabet/05-aligned-protein.aln.fasta").read_bytes()).decode()},
+        pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor-agent/tools/corpus/alphabet/05-aligned-protein.aln.fasta").read_bytes()).decode()},
     mutation=True)
 check("protein alignment detected as protein", prot["alphabet"]["alphabet"] == "protein")
 offered2 = call("files.forToolPort", {"toolId": "fasttree", "operation": "infer", "port": "alignment"})

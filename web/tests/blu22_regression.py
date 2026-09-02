@@ -49,8 +49,8 @@ regressions already run beside conform.py.
 import base64, json, pathlib, sys, urllib.parse, urllib.request, uuid
 
 BASE = "http://localhost:3313/api/trpc"
-CORPUS = pathlib.Path("/home/thartist/Desktop/bluedoor-agent/tools/corpus/alphabet")
-EXAMPLES = pathlib.Path("/home/thartist/Desktop/bluedoor/tools/examples")
+CORPUS = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor-agent/tools/corpus/alphabet")
+EXAMPLES = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor/tools/examples")
 
 failures = []
 def check(label, condition, detail=""):
