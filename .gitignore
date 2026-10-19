@@ -16,5 +16,10 @@ node_modules/
 .next/
 next-env.d.ts
 
+# Python
+# A fact about the repo, not about either half: tools/.gitignore already
+# covers everything under tools/, this catches web/tests and anywhere else.
+__pycache__/
+
 # OS
 .DS_Store

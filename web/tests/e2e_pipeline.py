@@ -36,13 +36,28 @@ dev one, which holds real work:
       DEV_USER_ID=00000000-0000-4000-8000-000000000d01 \
       BLOB_DIR=/tmp/e2e/blobs RUN_STAGING_DIR=/tmp/e2e/runs pnpm next dev --port 3314
     python3 tests/e2e_pipeline.py
+
+The port defaults to 3314; set BLUEDOOR_TEST_PORT to point both this and
+blu22_regression.py at one dev server.
     python3 tests/e2e_pipeline.py    # again, against what the first run left
 """
-import base64, json, pathlib, sys, time, urllib.parse, urllib.request, uuid
+import base64, json, os, pathlib, sys, time, urllib.parse, urllib.request, uuid
 
-BASE = "http://localhost:3314/api/trpc"
+# One server can serve this and blu22_regression.py; both read the same variable.
+PORT = os.environ.get("BLUEDOOR_TEST_PORT", "3314")
+BASE = f"http://localhost:{PORT}/api/trpc"
 EXAMPLES = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor/tools/examples")
+OUTCOMES = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor/tools/outcomes.json")
 RUN = uuid.uuid4().hex[:8]
+
+# Derived, never hardcoded. The outcome vocabulary is stated once, in tools/
+# outcomes.json, and read by the executor, the web types and this file. Naming
+# the outcome by the ACTION it implies also asserts the thing that matters to a
+# person: a refused run is one they fix by choosing a different file, not one
+# they wait for us to fix.
+TOOL_OUTCOMES = json.loads(OUTCOMES.read_text())["tool_outcomes"]
+CHOOSE_ANOTHER = [n for n, o in TOOL_OUTCOMES.items()
+                  if o["action"] == "choose a different file"]
 
 failures = []
 def check(label, ok, detail=""):
@@ -141,8 +156,13 @@ run3 = wait(call("runs.start", {"adapterId": "fasttree", "operation": "infer",
     "inputs": [{"port": "alignment", "fileId": prot["id"]}], "outputParent": None},
     mutation=True)["runId"])
 print(f"  forced run outcome: {run3['outcome']}")
+# Positives before the negative: the vocabulary must actually name exactly one
+# "choose a different file" outcome, or the assertion below means nothing.
+check("vocabulary names one refusal outcome", len(CHOOSE_ANOTHER) == 1, str(CHOOSE_ANOTHER))
+check("the run's outcome is in the shared vocabulary",
+      run3["outcome"] in TOOL_OUTCOMES, run3["outcome"])
 check("executor refuses protein independently of the picker",
-      run3["outcome"] == "precondition_failed", run3["outcome"])
+      len(CHOOSE_ANOTHER) == 1 and run3["outcome"] == CHOOSE_ANOTHER[0], run3["outcome"])
 problems = (run3.get("result") or {}).get("problems") or []
 check("and says why", bool(problems), str(problems[:1]))
 

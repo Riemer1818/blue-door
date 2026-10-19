@@ -40,15 +40,17 @@ Needs a scratch database - never the dev one, which holds real work:
     DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/bluedoor_reg ./db/apply.sh
     DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/bluedoor_reg ./db/seed-dev.sh
     cd web && DATABASE_URL=postgres://bluedoor_app:bluedoor_app@127.0.0.1:5433/bluedoor_reg \
-      DEV_USER_ID=00000000-0000-4000-8000-000000000d01 pnpm next dev --port 3313
+      DEV_USER_ID=00000000-0000-4000-8000-000000000d01 pnpm next dev --port 3314
     python3 tests/blu22_regression.py
 
 Not yet wired into CI; that is separate work, and the peer's pipeline-level
 regressions already run beside conform.py.
 """
-import base64, json, pathlib, sys, urllib.parse, urllib.request, uuid
+import base64, json, os, pathlib, sys, urllib.parse, urllib.request, uuid
 
-BASE = "http://localhost:3313/api/trpc"
+# Same variable and same default as e2e_pipeline.py, so one dev server runs both.
+PORT = os.environ.get("BLUEDOOR_TEST_PORT", "3314")
+BASE = f"http://localhost:{PORT}/api/trpc"
 CORPUS = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor-agent/tools/corpus/alphabet")
 EXAMPLES = pathlib.Path("/home/thartist/Desktop/blue-door/bluedoor/tools/examples")
 
