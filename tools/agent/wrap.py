@@ -92,8 +92,14 @@ def build_toolset(run: E.Run, state: dict, workspace_scratch: pathlib.Path):
     async def probe(args):
         result = M.probe(args["image"], args["command"], args.get("stage"),
                          args.get("timeout_seconds") or 120)
+        # timed_out travels with the exit code, never inferred from it being
+        # null. probe.py already distinguishes the two; dropping the flag here
+        # made a timeout render as "exit None" - the same thing a reviewer sees
+        # for a probe that died some other way, and unreadable in the run record
+        # months later. The distinction exists one layer down; carry it.
         run.emit("probe.ran", {"image": args["image"], "command": args["command"],
                                "exit_code": result.get("exit_code"),
+                               "timed_out": bool(result.get("timed_out")),
                                "ms": int((result.get("wall_seconds") or 0) * 1000)})
         state.setdefault("probes", []).append(
             {"image": args["image"], "command": args["command"],

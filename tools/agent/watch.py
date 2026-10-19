@@ -44,8 +44,9 @@ def render(event: dict) -> str | None:
     if kind == "probe.ran":
         code = p.get("exit_code")
         colour = GREEN if code == 0 else YELLOW
+        status = "timed out" if p.get("timed_out") else f"exit {code}"
         cmd = " ".join(p.get("command", []))[:78]
-        return f"{stamp}    {DIM}probe{RESET} {colour}exit {code}{RESET}  {cmd}"
+        return f"{stamp}    {DIM}probe{RESET} {colour}{status}{RESET}  {cmd}"
     if kind == "manifest.drafted":
         return (f"{stamp}    {DIM}draft #{p.get('iteration')}{RESET} "
                 f"ops={','.join(p.get('operations', []))} "

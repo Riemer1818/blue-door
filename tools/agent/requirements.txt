@@ -1,5 +1,9 @@
 # Agent-side dependencies only. The runner and grader in tools/runner stay
 # standard-library-only on purpose - they have to work in a fresh clone and
 # inside a sandbox with nothing installed. Nothing here is imported by them.
+#
+# Install into tools/agent/.venv (gitignored); the system Python is
+# externally managed on Debian/Ubuntu and will refuse.
+claude-agent-sdk>=0.2  # drives wrap.py; the coding agent itself
 mcp>=2.0          # the MCP server exposing platform primitives to the agent
 jsonschema>=4.0   # manifest validation, returned structured rather than printed
